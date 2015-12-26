@@ -1,0 +1,114 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="sys">
+      <UniqueIdentifier>{1fc3cfc4-0a2c-453b-86f6-2f68162f81d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sys\_win32">
+      <UniqueIdentifier>{5b0f5119-6eee-4c81-af4c-0bec0ebde8ad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sys\_win32\x86">
+      <UniqueIdentifier>{578e90a0-b2e7-4f0f-8851-e0381b9b44dd}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\sys\events.h">
+      <Filter>sys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sys\glext.h">
+      <Filter>sys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sys\msys.h">
+      <Filter>sys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sys\msys_debug.h">
+      <Filter>sys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sys\msys_font.h">
+      <Filter>sys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sys\msys_glext.h">
+      <Filter>sys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sys\msys_libc.h">
+      <Filter>sys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sys\msys_malloc.h">
+      <Filter>sys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sys\msys_random.h">
+      <Filter>sys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sys\msys_sound.h">
+      <Filter>sys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sys\msys_thread.h">
+      <Filter>sys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sys\msys_timer.h">
+      <Filter>sys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sys\msys_types.h">
+      <Filter>sys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\intro.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\sys\msys.cpp">
+      <Filter>sys</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sys\msys_glext.cpp">
+      <Filter>sys</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sys\msys_malloc.cpp">
+      <Filter>sys</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sys\msys_random.cpp">
+      <Filter>sys</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sys\_win32\main_deb.cpp">
+      <Filter>sys\_win32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sys\_win32\main_rel.cpp">
+      <Filter>sys\_win32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sys\_win32\msys_debugOS.cpp">
+      <Filter>sys\_win32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sys\_win32\msys_fontOS.cpp">
+      <Filter>sys\_win32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sys\_win32\msys_mmallocOS.cpp">
+      <Filter>sys\_win32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sys\_win32\msys_soundOS.cpp">
+      <Filter>sys\_win32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sys\_win32\msys_threadOS.cpp">
+      <Filter>sys\_win32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sys\_win32\msys_timerOS.cpp">
+      <Filter>sys\_win32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sys\_win32\x86\msys_libcOS.cpp">
+      <Filter>sys\_win32\x86</Filter>
+    </ClCompile>
+    <ClCompile Include="..\intro.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

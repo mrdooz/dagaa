@@ -1,0 +1,122 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{9A66B5C3-0C67-40E2-B92D-CC737DCD7E8E}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>dagaa</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <GenerateManifest>true</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;WINDOWS;A32BITS;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>opengl32.lib;winmm.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;WINDOWS;A32BITS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>opengl32.lib;winmm.lib;glu32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <EntryPointSymbol>entrypoint</EntryPointSymbol>
+      <GenerateMapFile>true</GenerateMapFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\intro.h" />
+    <ClInclude Include="..\sys\events.h" />
+    <ClInclude Include="..\sys\glext.h" />
+    <ClInclude Include="..\sys\msys.h" />
+    <ClInclude Include="..\sys\msys_debug.h" />
+    <ClInclude Include="..\sys\msys_font.h" />
+    <ClInclude Include="..\sys\msys_glext.h" />
+    <ClInclude Include="..\sys\msys_libc.h" />
+    <ClInclude Include="..\sys\msys_malloc.h" />
+    <ClInclude Include="..\sys\msys_random.h" />
+    <ClInclude Include="..\sys\msys_sound.h" />
+    <ClInclude Include="..\sys\msys_thread.h" />
+    <ClInclude Include="..\sys\msys_timer.h" />
+    <ClInclude Include="..\sys\msys_types.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\intro.cpp" />
+    <ClCompile Include="..\sys\msys.cpp" />
+    <ClCompile Include="..\sys\msys_glext.cpp" />
+    <ClCompile Include="..\sys\msys_malloc.cpp" />
+    <ClCompile Include="..\sys\msys_random.cpp" />
+    <ClCompile Include="..\sys\_win32\main_deb.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\sys\_win32\main_rel.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\sys\_win32\msys_debugOS.cpp" />
+    <ClCompile Include="..\sys\_win32\msys_fontOS.cpp" />
+    <ClCompile Include="..\sys\_win32\msys_mmallocOS.cpp" />
+    <ClCompile Include="..\sys\_win32\msys_soundOS.cpp" />
+    <ClCompile Include="..\sys\_win32\msys_threadOS.cpp" />
+    <ClCompile Include="..\sys\_win32\msys_timerOS.cpp" />
+    <ClCompile Include="..\sys\_win32\x86\msys_libcOS.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
