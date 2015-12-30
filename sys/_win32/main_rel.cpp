@@ -137,7 +137,7 @@ static void window_end(WININFO* info)
 }
 
 //----------------------------------------------------------------------------
-static int WindowInit(WININFO* info)
+static int window_init(WININFO* info)
 {
   unsigned int PixelFormat;
   DWORD dwExStyle, dwStyle;
@@ -160,6 +160,7 @@ static int WindowInit(WININFO* info)
   if (info->full)
 #endif
   {
+    // Fullscreen
     if (ChangeDisplaySettings(&screenSettings, CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL)
       return (0);
     dwExStyle = WS_EX_APPWINDOW;
@@ -243,7 +244,7 @@ void entrypoint(void)
   wininfo.full = (MessageBox(0, "fullscreen?", wndclass, MB_YESNO | MB_ICONQUESTION) == IDYES);
 #endif
 
-  if (!WindowInit(&wininfo))
+  if (!window_init(&wininfo))
   {
     window_end(&wininfo);
     MessageBox(0, msg_error, 0, MB_OK | MB_ICONEXCLAMATION);
@@ -276,8 +277,11 @@ void entrypoint(void)
       }
       DispatchMessage(&msg);
     }
-    done |= intro_do();
-    SwapBuffers(wininfo.hDC);
+
+    g_Graphics.Clear();
+    done |= intro_run();
+    g_Graphics.Present();
+    //SwapBuffers(wininfo.hDC);
   }
 
   intro_end();

@@ -19,6 +19,8 @@ typedef signed char sint8;
 
 typedef uint32 intptr;
 
+typedef uint32 u32;
+
 // ---- types --------------------------------------------
 
 #ifdef __cplusplus

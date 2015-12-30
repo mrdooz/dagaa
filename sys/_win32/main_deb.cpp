@@ -232,7 +232,7 @@ static void window_end(WININFO* info)
   }
 }
 
-static int WindowInit(WININFO* info)
+static int window_init(WININFO* info)
 {
   unsigned int PixelFormat;
   DWORD dwExStyle, dwStyle;
@@ -367,7 +367,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR lpCmdLine,
   // if( MessageBox( 0, "fullscreen?", info->wndclass, MB_YESNO|MB_ICONQUESTION)==IDYES )
   //   info->full++;
 
-  if (!WindowInit(&wininfo))
+  if (!window_init(&wininfo))
   {
     window_end(&wininfo);
     MessageBox(0, msg_error, 0, MB_OK | MB_ICONEXCLAMATION);
@@ -401,13 +401,17 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR lpCmdLine,
     else
     {
       procMouse();
-      done = intro_do();
+
+      g_Graphics.Clear();
+      done = intro_run();
 
       static long to = 0;
       if (!to)
         to = timeGetTime();
       float t = 0.001f * (float)(timeGetTime() - to);
-      SwapBuffers(wininfo.hDC);
+      //SwapBuffers(wininfo.hDC);
+
+      g_Graphics.Present();
 
       DrawTime(&wininfo, t);
     }

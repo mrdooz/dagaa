@@ -2,11 +2,11 @@
 // iq . 2003/2008 . code for 64 kb intros by RGBA                           //
 //--------------------------------------------------------------------------//
 
-#ifdef WIN32
+#if WITH_OPENGL
+
 #define WIN32_LEAN_AND_MEAN
 #define WIN32_EXTRA_LEAN
 #include <windows.h>
-#endif
 
 #include <GL/gl.h>
 #include "glext.h"
@@ -90,3 +90,4 @@ int msys_glextInit(void)
 
   return (1);
 }
+#endif

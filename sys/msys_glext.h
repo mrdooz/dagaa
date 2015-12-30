@@ -5,11 +5,11 @@
 #ifndef _MSYS_GLEXT_H_
 #define _MSYS_GLEXT_H_
 
-#ifdef WIN32
+#if WITH_OPENGL
+
 #define WIN32_LEAN_AND_MEAN
 #define WIN32_EXTRA_LEAN
 #include <windows.h>
-#endif
 #include <GL/gl.h>
 #include "glext.h"
 
@@ -67,4 +67,5 @@ extern void *msys_oglfunc[NUMFUNCIONES];
 // init
 int msys_glextInit( void );
 
+#endif
 #endif

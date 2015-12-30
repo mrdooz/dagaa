@@ -12,7 +12,7 @@ typedef struct
 }IntroProgressDelegate;
 
 int  intro_init( int xres, int yres, int nomusic, IntroProgressDelegate *pd );
-int  intro_do( void );
+int  intro_run( void );
 void intro_end( void );
 
 #endif
