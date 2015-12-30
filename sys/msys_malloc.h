@@ -19,7 +19,6 @@ void  msys_mallocEnd( void );
 void *msys_mallocSAlloc( uint32 amount );
 
 
-#ifdef WINDOWS
 /// just in case somebody wants to program in C++
 inline void * __cdecl  operator new( size_t size ) { return(msys_mallocAlloc((uint32)size)); }
 inline void   __cdecl  operator delete( void *ptr ) { msys_mallocFree(ptr); }
@@ -29,8 +28,6 @@ inline void   __cdecl  operator delete( void *ptr ) { msys_mallocFree(ptr); }
 
 //void * __cdecl operator new( unsigned int size );
 //void __cdecl operator delete( void *ptr );
-#endif
-
 
 
 #endif

@@ -7,13 +7,14 @@
 #include <windows.h>
 #include "../msys_types.h"
 
-void *msys_mallocAlloc( uint32 amount )
+//----------------------------------------------------------------------------
+void* msys_mallocAlloc(uint32 amount)
 {
-    return( GlobalAlloc( GMEM_ZEROINIT, amount ) );
+  return (GlobalAlloc(GMEM_ZEROINIT, amount));
 }
 
-void msys_mallocFree( void *ptr )
+//----------------------------------------------------------------------------
+void msys_mallocFree(void* ptr)
 {
-    GlobalFree( ptr );
+  GlobalFree(ptr);
 }
-

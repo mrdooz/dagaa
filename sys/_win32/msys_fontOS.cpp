@@ -32,7 +32,7 @@ void msys_fontStop( unsigned char *buffer, int xres, int yres )
 
 void msys_fontPrint( char *str, int size, int xo, int yo )
 {
-    SelectObject( hdc, CreateFont( size,0,0,0,0,0,0,0,0,OUT_TT_PRECIS*0,0,ANTIALIASED_QUALITY,0,"Times New Roman") );    
+    SelectObject( hdc, CreateFont( size,0,0,0,0,0,0,0,0,OUT_TT_PRECIS*0,0,ANTIALIASED_QUALITY,0,"Times New Roman") );
 
     SetTextColor( hdc, 0x00ffffff );
 

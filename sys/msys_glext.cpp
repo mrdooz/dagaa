@@ -11,23 +11,12 @@
 #include <GL/gl.h>
 #include "glext.h"
 
-#ifdef WIN32
-#endif
-
-#ifdef LINUX
-#include <GL/glx.h>
-#endif
-
-#ifdef IRIX
-#include <GL/glx.h>
-#endif
-
 #include <string.h>
 
 //--- d a t a ---------------------------------------------------------------
 #include "msys_glext.h"
 
-static char *funciones = {
+static char* funciones = {
     // multitexture
     "glActiveTextureARB\x0"
     "glClientActiveTextureARB\x0"
@@ -37,7 +26,7 @@ static char *funciones = {
     "glBindProgramARB\x0"
     "glProgramStringARB\x0"
     "glProgramLocalParameter4fvARB\x0"
-	"glProgramEnvParameter4fvARB\x0"
+    "glProgramEnvParameter4fvARB\x0"
     // textures 3d
     "glTexImage3D\x0"
     // vbo-ibo
@@ -46,19 +35,19 @@ static char *funciones = {
     "glBufferSubDataARB\x0"
     "glDeleteBuffersARB\x0"
 
-	// shader
-	"glCreateProgram\x0"
-	"glCreateShader\x0"
-	"glShaderSource\x0"
-	"glCompileShader\x0"
-	"glAttachShader\x0"
-	"glLinkProgram\x0"
-	"glUseProgram\x0"
+    // shader
+    "glCreateProgram\x0"
+    "glCreateShader\x0"
+    "glShaderSource\x0"
+    "glCompileShader\x0"
+    "glAttachShader\x0"
+    "glLinkProgram\x0"
+    "glUseProgram\x0"
     "glUniform4fv\x0"
     "glUniform1i\x0"
     "glGetUniformLocationARB\x0"
-	"glGetObjectParameterivARB\x0"
-	"glGetInfoLogARB\x0"
+    "glGetObjectParameterivARB\x0"
+    "glGetInfoLogARB\x0"
 
     "glLoadTransposeMatrixf\x0"
 
@@ -80,35 +69,24 @@ static char *funciones = {
     //"glGetFramebufferAttachmentParameterivEXT\x0"
     "glGenerateMipmapEXT\x0"
 
-    };
+};
 
-void *msys_oglfunc[NUMFUNCIONES];
+void* msys_oglfunc[NUMFUNCIONES];
 
 //--- c o d e ---------------------------------------------------------------
 
-int msys_glextInit( void )
+int msys_glextInit(void)
 {
-    char *str = funciones;
-    for( int i=0; i<NUMFUNCIONES; i++ )
-        {
-        #ifdef WIN32
-        msys_oglfunc[i] = wglGetProcAddress( str );
-        #endif
-        #ifdef LINUX
-        msys_oglfunc[i] = glXGetProcAddress( (const unsigned char *)str );
-        #endif
-        #ifdef IRIX
-        msys_oglfunc[i] = glXGetProcAddress( (const unsigned char *)str );
-        #endif
+  char* str = funciones;
+  for (int i = 0; i < NUMFUNCIONES; i++)
+  {
+    msys_oglfunc[i] = wglGetProcAddress(str);
 
-        str += 1+strlen( str );
+    str += 1 + strlen(str);
 
-        if( !msys_oglfunc[i] )
-			return( 0 );
-        }
+    if (!msys_oglfunc[i])
+      return (0);
+  }
 
-
-    return( 1 );
+  return (1);
 }
-
-

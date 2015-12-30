@@ -7,13 +7,14 @@
 #include <windows.h>
 #include <mmsystem.h>
 
-
-long msys_timerGet( void )
+//----------------------------------------------------------------------------
+long msys_timerGet(void)
 {
-    return( timeGetTime() );
+  return (timeGetTime());
 }
 
-void msys_timerSleep( long miliseconds )
+//----------------------------------------------------------------------------
+void msys_timerSleep(long miliseconds)
 {
-    Sleep( miliseconds );
+  Sleep(miliseconds);
 }

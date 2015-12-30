@@ -7,11 +7,6 @@
 #define XRES 800
 #define YRES 600
 
-#ifdef A64BITS
-#pragma pack(                                                                                      \
-    8) // VERY important, so WNDCLASS get's the correct padding and we don't crash the system
-#endif
-
 //#pragma check_stack(off)
 //#pragma runtime_checks("", off)
 
@@ -141,7 +136,8 @@ static void window_end(WININFO* info)
   }
 }
 
-static int window_init(WININFO* info)
+//----------------------------------------------------------------------------
+static int WindowInit(WININFO* info)
 {
   unsigned int PixelFormat;
   DWORD dwExStyle, dwStyle;
@@ -236,53 +232,6 @@ static int window_init(WININFO* info)
 }
 
 //----------------------------------------------------------------------------
-#if 0
-extern "C" extern int __cdecl _heap_init (int);
-extern "C" extern int __cdecl _mtinit ( void );
-extern "C" _CRTIMP int __cdecl _CrtSetCheckCount(int);
-extern "C" extern int __cdecl _ioinit (void);
-extern "C" extern int __cdecl _cinit (int);
-
-
-
-/*
-extern "C" extern int _heap_init(int);
-extern "C" extern void _ioinit(void);
-extern "C" extern void _cinit(void);
-
-extern "C" extern void _mtinit(void);
-*/
-
-#include <rtcapi.h>
-extern "C" extern void _RTC_Initialize(void);
-
-
-int __cdecl MyErrorFunc(int, const wchar_t *, int, const wchar_t *, const wchar_t *, ...)
-{
-MessageBox(0,"q",0,0);
-    return 0;
-}
-
-
-/*
-// C version:
-_RTC_error_fnW __cdecl _CRT_RTC_INITW(void *res0, void **res1, int res2, int res3, int res4)
-{
-    return &MyErrorFunc; 
-}
-*/
-
-// C++ version:
-extern "C" _RTC_error_fnW __cdecl _CRT_RTC_INITW(void *res0, void **res1, int res2, int res3, int res4)
-{
-    return &MyErrorFunc;
-}
-
-#include <winbase.h>
-
- // RunTmChk.lib
-#endif
-
 void entrypoint(void)
 {
 
@@ -294,7 +243,7 @@ void entrypoint(void)
   wininfo.full = (MessageBox(0, "fullscreen?", wndclass, MB_YESNO | MB_ICONQUESTION) == IDYES);
 #endif
 
-  if (!window_init(&wininfo))
+  if (!WindowInit(&wininfo))
   {
     window_end(&wininfo);
     MessageBox(0, msg_error, 0, MB_OK | MB_ICONEXCLAMATION);

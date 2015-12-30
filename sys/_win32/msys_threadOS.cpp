@@ -8,20 +8,20 @@
 
 #include "../msys_thread.h"
 
-long msys_threadNew( THREAD_FUNC func )
+//----------------------------------------------------------------------------
+long msys_threadNew(THREAD_FUNC func)
 {
-	unsigned long thid;
+  unsigned long thid;
 
-    HANDLE th = CreateThread( NULL, 0, (LPTHREAD_START_ROUTINE)func, 0,0, &thid );
+  HANDLE th = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)func, 0, 0, &thid);
 
-    SetThreadPriority( th, THREAD_PRIORITY_HIGHEST );
+  SetThreadPriority(th, THREAD_PRIORITY_HIGHEST);
 
-    return( (long)th );
+  return ((long)th);
 }
 
-
-
-void msys_threadDelete( int id)
+//----------------------------------------------------------------------------
+void msys_threadDelete(int id)
 {
-    CloseHandle( (HANDLE)id );
+  CloseHandle((HANDLE)id);
 }

@@ -16,8 +16,7 @@
 #include "msys_glext.h"
 #include "msys_debug.h"
 
-int  msys_init( uint64 h );
-void msys_end( void );
+int msys_init(uint64 h);
+void msys_end(void);
 
 #endif
-

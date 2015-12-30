@@ -7,13 +7,12 @@
 
 #ifdef DEBUG
 
-int  msys_debugInit( void );
-void msys_debugEnd( void );
-void msys_debugPrintf( char *format, ... );
-void msys_debugCheckfor( bool expression, char *format, ... );
-void msys_debugHaltProgram( char *str );
+int msys_debugInit(void);
+void msys_debugEnd(void);
+void msys_debugPrintf(char* format, ...);
+void msys_debugCheckfor(bool expression, char* format, ...);
+void msys_debugHaltProgram(char* str);
 
 #endif
 
 #endif
-
