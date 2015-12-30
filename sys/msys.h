@@ -15,10 +15,6 @@
 #include "msys_font.h"
 #include "msys_debug.h"
 
-#if WITH_OPENGL
-#include "msys_glext.h"
-#endif
-
 #include <dxgi.h>
 #include <d3d11.h>
 

@@ -23,7 +23,6 @@ typedef struct
   //---------------
   HINSTANCE hInstance;
   HDC hDC;
-  HGLRC hRC;
   HWND hWnd;
   //---------------
   int full;
@@ -160,11 +159,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 {
   int i;
 
-  // salvapantallas
   if (uMsg == WM_SYSCOMMAND && (wParam == SC_SCREENSAVE || wParam == SC_MONITORPOWER))
     return (0);
 
-  // boton x o pulsacion de escape
   if (uMsg == WM_CLOSE || uMsg == WM_DESTROY || (uMsg == WM_KEYDOWN && wParam == VK_ESCAPE))
   {
     PostQuitMessage(0);
@@ -211,12 +208,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
 static void window_end(WININFO* info)
 {
-  if (info->hRC)
-  {
-    wglMakeCurrent(0, 0);
-    wglDeleteContext(info->hRC);
-  }
-
   if (info->hDC)
     ReleaseDC(info->hWnd, info->hDC);
   if (info->hWnd)
@@ -304,12 +295,6 @@ static int window_init(WININFO* info)
     return (0);
 
   if (!SetPixelFormat(info->hDC, PixelFormat, &pfd))
-    return (0);
-
-  if (!(info->hRC = wglCreateContext(info->hDC)))
-    return (0);
-
-  if (!wglMakeCurrent(info->hDC, info->hRC))
     return (0);
 
   // SetForegroundWindow( info->hWnd );    // slightly higher priority
@@ -409,7 +394,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR lpCmdLine,
       if (!to)
         to = timeGetTime();
       float t = 0.001f * (float)(timeGetTime() - to);
-      //SwapBuffers(wininfo.hDC);
 
       g_Graphics.Present();
 

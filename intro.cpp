@@ -34,30 +34,6 @@ void intro_end(void)
 }
 
 //---------------------------------------------------------------------
-
-#if WITH_OPENGL
-int intro_run()
-{
-  float time = (1.0f / 1000.0f) * (float)(msys_timerGet() - intro.mTo);
-
-  glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT);
-
-  glBegin(GL_TRIANGLES);
-  glColor4f(0.1f, 0.2f, 0.3f, 1.0f);
-  glVertex3f(0.0f, 0.0f, 0.0f);
-  glVertex3f(msys_sinf(time) + 0.1f * msys_frand(&intro.mSeed),
-    msys_cosf(time) + 0.1f * msys_frand(&intro.mSeed),
-    0.0f);
-  glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-  glVertex3f(msys_sinf(time + 0.5f) + 0.1f * msys_frand(&intro.mSeed),
-    msys_cosf(time + 0.5f) + 0.1f * msys_frand(&intro.mSeed),
-    0.0f);
-  glEnd();
-  return 0;
-}
-#endif
-
 int intro_run()
 {
   float time = (1.0f / 1000.0f) * (float)(msys_timerGet() - intro.mTo);

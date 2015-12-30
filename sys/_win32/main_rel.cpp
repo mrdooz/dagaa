@@ -27,7 +27,6 @@ typedef struct
   HINSTANCE hInstance;
   HWND hWnd;
   HDC hDC;
-  HGLRC hRC;
   int full;
 } WININFO;
 
@@ -114,12 +113,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
 static void window_end(WININFO* info)
 {
-  if (info->hRC)
-  {
-    wglMakeCurrent(0, 0);
-    wglDeleteContext(info->hRC);
-  }
-
   if (info->hDC)
     ReleaseDC(info->hWnd, info->hDC);
   if (info->hWnd)
@@ -220,12 +213,6 @@ static int window_init(WININFO* info)
   if (!SetPixelFormat(info->hDC, PixelFormat, &pfd))
     return (0);
 
-  if (!(info->hRC = wglCreateContext(info->hDC)))
-    return (0);
-
-  if (!wglMakeCurrent(info->hDC, info->hRC))
-    return (0);
-
   SetForegroundWindow(info->hWnd);
   SetFocus(info->hWnd);
 
@@ -281,7 +268,6 @@ void entrypoint(void)
     g_Graphics.Clear();
     done |= intro_run();
     g_Graphics.Present();
-    //SwapBuffers(wininfo.hDC);
   }
 
   intro_end();

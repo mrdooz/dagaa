@@ -2,7 +2,6 @@
 // iq . 2003/2008 . code for 64 kb intros by RGBA                           //
 //--------------------------------------------------------------------------//
 
-#include "msys_glext.h"
 #include "msys_malloc.h"
 #include "msys_font.h"
 #include "msys_types.h"
@@ -124,12 +123,6 @@ int msys_directx_init(intptr h)
 
 int msys_init(intptr h)
 {
-
-#if WITH_OPENGL
-  if (!msys_glextInit())
-    return 0;
-#endif
-
   if (!msys_directx_init(h))
     return 0;
 

@@ -27,9 +27,6 @@
     <ClInclude Include="..\sys\events.h">
       <Filter>sys</Filter>
     </ClInclude>
-    <ClInclude Include="..\sys\glext.h">
-      <Filter>sys</Filter>
-    </ClInclude>
     <ClInclude Include="..\sys\msys.h">
       <Filter>sys</Filter>
     </ClInclude>
@@ -37,9 +34,6 @@
       <Filter>sys</Filter>
     </ClInclude>
     <ClInclude Include="..\sys\msys_font.h">
-      <Filter>sys</Filter>
-    </ClInclude>
-    <ClInclude Include="..\sys\msys_glext.h">
       <Filter>sys</Filter>
     </ClInclude>
     <ClInclude Include="..\sys\msys_libc.h">
@@ -69,9 +63,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\sys\msys.cpp">
-      <Filter>sys</Filter>
-    </ClCompile>
-    <ClCompile Include="..\sys\msys_glext.cpp">
       <Filter>sys</Filter>
     </ClCompile>
     <ClCompile Include="..\sys\msys_malloc.cpp">
