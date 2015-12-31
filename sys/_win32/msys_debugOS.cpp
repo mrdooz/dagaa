@@ -2,11 +2,8 @@
 // iq . 2003/2008 . code for 64 kb intros by RGBA                           //
 //--------------------------------------------------------------------------//
 
-#ifdef DEBUG
+#ifdef _DEBUG
 
-#include <windows.h>
-#include <stdio.h>
-#include <stdarg.h>
 #include "../msys_debug.h"
 
 static FILE* fp;

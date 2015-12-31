@@ -4,8 +4,6 @@
 
 #define WIN32_LEAN_AND_MEAN
 #define WIN32_EXTRA_LEAN
-#include <windows.h>
-#include <mmsystem.h>
 
 #define PLAYER_RATE 44100
 #define PLAYER_NUMCHANNELS 2

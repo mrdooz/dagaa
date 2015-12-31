@@ -7,14 +7,11 @@
 
 #define WIN32_LEAN_AND_MEAN
 #define WIN32_EXTRA_LEAN
-#include <windows.h>
-#include <mmsystem.h>
-#include <GL/gl.h>
-#include <string.h>
-#include <stdio.h>
-#include "../../intro.h"
-#include "../msys.h"
-#include "../events.h"
+#include "intro.h"
+#include "sys/msys.h"
+#include "sys/events.h"
+#include "sys/msys_graphics.hpp"
+#include "sys/_win32/msys_filewatcherOS.hpp"
 
 //----------------------------------------------------------------------------
 
@@ -52,8 +49,8 @@ static const char msg_wait[]   = "wait while loading...";
 static const char msg_error[] = "intro_init()!\n\n"\
                              "  no memory?\n"\
                              "  no music?\n"\
-                             "  no sjades?";
-static const char wndclass[] = "rgba_intro";
+                             "  no shaders?";
+static const char wndclass[] = "intro";
 // clang-format on
 
 //----------------------------------------------------------------------------
@@ -225,9 +222,9 @@ static void window_end(WININFO* info)
 
 static int window_init(WININFO* info)
 {
-  unsigned int PixelFormat;
+  //unsigned int PixelFormat;
   DWORD dwExStyle, dwStyle;
-  DEVMODE dmScreenSettings;
+  //DEVMODE dmScreenSettings;
   WNDCLASS wc;
   RECT rec;
 
@@ -243,15 +240,15 @@ static int window_init(WININFO* info)
 
   if (info->full)
   {
-    msys_memset(&dmScreenSettings, 0, sizeof(DEVMODE));
-    dmScreenSettings.dmSize = sizeof(DEVMODE);
-    dmScreenSettings.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
-    dmScreenSettings.dmBitsPerPel = 32;
-    dmScreenSettings.dmPelsWidth = XRES;
-    dmScreenSettings.dmPelsHeight = YRES;
+    //msys_memset(&dmScreenSettings, 0, sizeof(DEVMODE));
+    //dmScreenSettings.dmSize = sizeof(DEVMODE);
+    //dmScreenSettings.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
+    //dmScreenSettings.dmBitsPerPel = 32;
+    //dmScreenSettings.dmPelsWidth = XRES;
+    //dmScreenSettings.dmPelsHeight = YRES;
 
-    if (ChangeDisplaySettings(&dmScreenSettings, CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL)
-      return (0);
+    //if (ChangeDisplaySettings(&dmScreenSettings, CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL)
+    //  return (0);
 
     dwExStyle = WS_EX_APPWINDOW;
     dwStyle = WS_VISIBLE | WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
@@ -291,11 +288,11 @@ static int window_init(WININFO* info)
   if (!(info->hDC = GetDC(info->hWnd)))
     return (0);
 
-  if (!(PixelFormat = ChoosePixelFormat(info->hDC, &pfd)))
-    return (0);
+  //if (!(PixelFormat = ChoosePixelFormat(info->hDC, &pfd)))
+  //  return (0);
 
-  if (!SetPixelFormat(info->hDC, PixelFormat, &pfd))
-    return (0);
+  //if (!SetPixelFormat(info->hDC, PixelFormat, &pfd))
+  //  return (0);
 
   // SetForegroundWindow( info->hWnd );    // slightly higher priority
   // SetFocus( info->hWnd );               // sets keyboard focus to the window
@@ -336,8 +333,6 @@ static void DrawTime(WININFO* info, float t)
   }
 }
 
-void calcula(void);
-
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
   MSG msg;
@@ -346,6 +341,10 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR lpCmdLine,
   //    calcula(); return( 0 );
   if (!msys_debugInit())
     return 0;
+
+#if WITH_FILE_WATCHER
+  g_FileWatcher = new FileWatcherWin32();
+#endif
 
   wininfo.hInstance = GetModuleHandle(0);
 
@@ -387,7 +386,10 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR lpCmdLine,
     {
       procMouse();
 
-      g_Graphics.Clear();
+#if WITH_FILE_WATCHER
+      g_FileWatcher->Tick();
+#endif
+      g_Graphics->Clear();
       done = intro_run();
 
       static long to = 0;
@@ -395,16 +397,15 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR lpCmdLine,
         to = timeGetTime();
       float t = 0.001f * (float)(timeGetTime() - to);
 
-      g_Graphics.Present();
+      g_Graphics->Present();
 
       DrawTime(&wininfo, t);
     }
   }
 
   intro_end();
-
   window_end(&wininfo);
-
+  msys_end();
   msys_debugEnd();
 
   return (0);

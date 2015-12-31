@@ -14,12 +14,10 @@
 
 #define WIN32_LEAN_AND_MEAN
 #define WIN32_EXTRA_LEAN
-#include <windows.h>
-#include <string.h>
-#include "../../intro.h"
-#include "../msys.h"
-#include "../events.h"
-
+#include "intro.h"
+#include "sys/events.h"
+#include "sys/msys.h"
+#include "sys/msys_graphics.hpp"
 //----------------------------------------------------------------------------
 
 typedef struct
@@ -27,6 +25,7 @@ typedef struct
   HINSTANCE hInstance;
   HWND hWnd;
   HDC hDC;
+  int width, height;
   int full;
 } WININFO;
 
@@ -65,8 +64,8 @@ static DEVMODE screenSettings =
 };
 // clang-format on
 
-static const char wndclass[] = "rgba_intro";
-static const char msg_error[] = "no memory?\nno music?\nno shades?";
+static const char wndclass[] = "intro";
+static const char msg_error[] = "no memory?\nno music?\nno shaders?";
 
 //----------------------------------------------------------------------------
 static void loadbar(void* data, int n)
@@ -265,9 +264,9 @@ void entrypoint(void)
       DispatchMessage(&msg);
     }
 
-    g_Graphics.Clear();
+    g_Graphics->Clear();
     done |= intro_run();
-    g_Graphics.Present();
+    g_Graphics->Present();
   }
 
   intro_end();

@@ -5,7 +5,7 @@
 #ifndef _MSYS_DEBUG_H_
 #define _MSYS_DEBUG_H_
 
-#ifdef DEBUG
+#ifdef _DEBUG
 
 int msys_debugInit(void);
 void msys_debugEnd(void);

@@ -60,6 +60,15 @@
     <ClInclude Include="..\intro.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\precompiled.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sys\msys_graphics.hpp">
+      <Filter>sys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sys\_win32\msys_filewatcherOS.hpp">
+      <Filter>sys\_win32</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\sys\msys.cpp">
@@ -70,12 +79,6 @@
     </ClCompile>
     <ClCompile Include="..\sys\msys_random.cpp">
       <Filter>sys</Filter>
-    </ClCompile>
-    <ClCompile Include="..\sys\_win32\main_deb.cpp">
-      <Filter>sys\_win32</Filter>
-    </ClCompile>
-    <ClCompile Include="..\sys\_win32\main_rel.cpp">
-      <Filter>sys\_win32</Filter>
     </ClCompile>
     <ClCompile Include="..\sys\_win32\msys_debugOS.cpp">
       <Filter>sys\_win32</Filter>
@@ -99,6 +102,21 @@
       <Filter>sys\_win32\x86</Filter>
     </ClCompile>
     <ClCompile Include="..\intro.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\precompiled.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sys\msys_graphics.cpp">
+      <Filter>sys</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sys\_win32\msys_filewatcherOS.cpp">
+      <Filter>sys\_win32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\main_release.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\main_debug.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
