@@ -18,6 +18,9 @@
 #include "sys/events.h"
 #include "sys/msys.h"
 #include "sys/msys_graphics.hpp"
+#include "sys/msys_libc.h"
+
+#include "texturelib/texturelib.hpp"
 //----------------------------------------------------------------------------
 
 typedef struct
@@ -219,9 +222,8 @@ static int window_init(WININFO* info)
 }
 
 //----------------------------------------------------------------------------
-void entrypoint(void)
+int WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-
   WININFO wininfo;
   MSG msg;
   int done = 0;
@@ -265,7 +267,7 @@ void entrypoint(void)
     }
 
     g_Graphics->Clear();
-    done |= intro_run();
+    done |= intro_run(ObjectHandle());
     g_Graphics->Present();
   }
 

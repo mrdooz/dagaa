@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -14,18 +14,19 @@
     <ProjectGuid>{9A66B5C3-0C67-40E2-B92D-CC737DCD7E8E}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>dagaa</RootNamespace>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140_xp</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -41,10 +42,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>C:\projects\dagaa;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <GenerateManifest>true</GenerateManifest>
+    <IncludePath>C:\projects\dagaa;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -69,7 +72,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>MinSpace</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
       <PrecompiledHeaderFile>precompiled.hpp</PrecompiledHeaderFile>
@@ -79,34 +82,52 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <SDLCheck>
+      </SDLCheck>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>false</OptimizeReferences>
+      <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
-      <EntryPointSymbol>entrypoint</EntryPointSymbol>
+      <EntryPointSymbol>
+      </EntryPointSymbol>
       <GenerateMapFile>true</GenerateMapFile>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\intro.h" />
     <ClInclude Include="..\precompiled.hpp" />
     <ClInclude Include="..\sys\events.h" />
+    <ClInclude Include="..\sys\flags.hpp" />
+    <ClInclude Include="..\sys\free_list.hpp" />
     <ClInclude Include="..\sys\msys.h" />
+    <ClInclude Include="..\sys\msys_arena_allocator.hpp" />
+    <ClInclude Include="..\sys\msys_containers.hpp" />
     <ClInclude Include="..\sys\msys_debug.h" />
+    <ClInclude Include="..\sys\msys_file.hpp" />
     <ClInclude Include="..\sys\msys_font.h" />
     <ClInclude Include="..\sys\msys_graphics.hpp" />
     <ClInclude Include="..\sys\msys_libc.h" />
     <ClInclude Include="..\sys\msys_malloc.h" />
+    <ClInclude Include="..\sys\msys_math.hpp" />
     <ClInclude Include="..\sys\msys_random.h" />
     <ClInclude Include="..\sys\msys_sound.h" />
     <ClInclude Include="..\sys\msys_thread.h" />
     <ClInclude Include="..\sys\msys_timer.h" />
     <ClInclude Include="..\sys\msys_types.h" />
+    <ClInclude Include="..\sys\msys_utils.hpp" />
+    <ClInclude Include="..\sys\object_handle.hpp" />
     <ClInclude Include="..\sys\_win32\msys_filewatcherOS.hpp" />
+    <ClInclude Include="..\texturelib\texturelib.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\intro.cpp" />
@@ -121,10 +142,16 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\sys\free_list.cpp" />
+    <ClCompile Include="..\sys\gpu_objects.cpp" />
     <ClCompile Include="..\sys\msys.cpp" />
+    <ClCompile Include="..\sys\msys_arena_allocator.cpp" />
+    <ClCompile Include="..\sys\msys_file.cpp" />
     <ClCompile Include="..\sys\msys_graphics.cpp" />
     <ClCompile Include="..\sys\msys_malloc.cpp" />
+    <ClCompile Include="..\sys\msys_math.cpp" />
     <ClCompile Include="..\sys\msys_random.cpp" />
+    <ClCompile Include="..\sys\msys_utils.cpp" />
     <ClCompile Include="..\sys\_win32\msys_debugOS.cpp" />
     <ClCompile Include="..\sys\_win32\msys_filewatcherOS.cpp" />
     <ClCompile Include="..\sys\_win32\msys_fontOS.cpp" />
@@ -133,6 +160,7 @@
     <ClCompile Include="..\sys\_win32\msys_threadOS.cpp" />
     <ClCompile Include="..\sys\_win32\msys_timerOS.cpp" />
     <ClCompile Include="..\sys\_win32\x86\msys_libcOS.cpp" />
+    <ClCompile Include="..\texturelib\texturelib.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

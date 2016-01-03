@@ -1,3 +1,9 @@
+Texture2D Texture0 : register(t0);
+sampler PointSampler : register(s0);
+sampler LinearSampler : register(s1);
+sampler LinearWrap : register(s2);
+sampler LinearBorder : register(s3);
+
 //------------------------------------------------------
 struct VSQuadOut
 {
@@ -24,5 +30,68 @@ VSQuadOut VsQuad(uint vertexID : SV_VertexID)
 // entry-point: ps
 float4 PsRaytrace(VSQuadOut p) : SV_Target
 {
-  return 0.5 + 0.5 * sin(10 * p.uv.x);
+  float4 a = Texture0.Sample(LinearSampler, p.uv);
+  float4 b = Texture0.Sample(LinearSampler, p.uv);
+  return 0.5 * a + b;
+  // float2 dim = float2(800, 600);
+  // float2 xx = 2 * (p.pos.xy / dim - 0.5);
+  // float f = 0.8 + 0.2 * atan2(xx.y, xx.x);
+  // float r = length(xx);
+  // return r;
+}
+
+//------------------------------------------------------
+// entry-point: ps
+float4 PsRaytrace2(VSQuadOut p) : SV_Target
+{
+  float4 a = Texture0.Sample(LinearSampler, p.uv);
+  float4 b = Texture0.Sample(LinearSampler, p.uv);
+  return 0.5 * a * b;
+  // float2 dim = float2(800, 600);
+  // float2 xx = 2 * (p.pos.xy / dim - 0.5);
+  // float f = 0.8 + 0.2 * atan2(xx.y, xx.x);
+  // float r = length(xx);
+  // return r;
+}
+
+//------------------------------------------------------
+// entry-point: ps
+float4 PsRaytrace3(VSQuadOut p) : SV_Target
+{
+  float4 a = Texture0.Sample(LinearSampler, p.uv);
+  float4 b = Texture0.Sample(LinearSampler, p.uv);
+  return 0.5 * a * b;
+  // float2 dim = float2(800, 600);
+  // float2 xx = 2 * (p.pos.xy / dim - 0.5);
+  // float f = 0.8 + 0.2 * atan2(xx.y, xx.x);
+  // float r = length(xx);
+  // return r;
+}
+
+//------------------------------------------------------
+// entry-point: ps
+float4 PsRaytrace4(VSQuadOut p) : SV_Target
+{
+  float4 a = Texture0.Sample(LinearSampler, p.uv);
+  float4 b = Texture0.Sample(LinearSampler, p.uv);
+  return 0.5 * a * b;
+  // float2 dim = float2(800, 600);
+  // float2 xx = 2 * (p.pos.xy / dim - 0.5);
+  // float f = 0.8 + 0.2 * atan2(xx.y, xx.x);
+  // float r = length(xx);
+  // return r;
+}
+
+//------------------------------------------------------
+// entry-point: ps
+float4 PsRaytrace5(VSQuadOut p) : SV_Target
+{
+  float4 a = Texture0.Sample(LinearSampler, p.uv);
+  float4 b = Texture0.Sample(LinearSampler, p.uv);
+  return 0.5 * a * b;
+  // float2 dim = float2(800, 600);
+  // float2 xx = 2 * (p.pos.xy / dim - 0.5);
+  // float f = 0.8 + 0.2 * atan2(xx.y, xx.x);
+  // float r = length(xx);
+  // return r;
 }

@@ -1,6 +1,7 @@
 #if WITH_FILE_WATCHER
 
 #include "msys_filewatcherOS.hpp"
+#include <sys/msys_file.hpp>
 
 FileWatcherWin32* g_FileWatcher;
 
@@ -8,39 +9,6 @@ FileWatcherWin32* g_FileWatcher;
 // instead it saves a temp file, and then deletes/renames
 static DWORD FILE_NOTIFY_FLAGS = FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE;
 
-//------------------------------------------------------------------------------
-class ScopedHandle
-{
-public:
-  ScopedHandle(HANDLE h) : _handle(h) {}
-  ~ScopedHandle() {
-    if (_handle != INVALID_HANDLE_VALUE)
-      CloseHandle(_handle);
-  }
-  operator bool() { return _handle != INVALID_HANDLE_VALUE; }
-  operator HANDLE() { return _handle; }
-  HANDLE handle() const { return _handle; }
-private:
-  HANDLE _handle;
-};
-
-//------------------------------------------------------------------------------
-bool LoadFile(const char* filename, vector<char> *buf)
-{
-  ScopedHandle h(CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
-  if (!h)
-    return false;
-
-  DWORD size = GetFileSize(h, NULL);
-  if (size > 0)
-  {
-    buf->resize(size);
-    DWORD res;
-    if (!ReadFile(h, &(*buf)[0], size, &res, NULL))
-      return false;
-  }
-  return true;
-}
 //------------------------------------------------------------------------------
 static string ReplaceAll(const string& str, char toReplace, char replaceWith)
 {

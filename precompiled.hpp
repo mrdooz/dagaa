@@ -1,19 +1,56 @@
 #pragma once
 
+#define WITH_TEXTURE_UPDATE 1
+
+
 #ifdef _DEBUG
 #ifndef WITH_FILE_WATCHER
 #define WITH_FILE_WATCHER 1
 #endif
-#ifndef WITH_DX_RELEASE
-#define WITH_DX_RELEASE 1
+#ifndef WITH_DX_CLEANUP
+#define WITH_DX_CLEANUP 1
+#endif
+#ifndef WITH_FP_VALIDATION
+#define WITH_FP_VALIDATION 1
+#endif
+#ifndef WITH_FILE_UTILS
+#define WITH_FILE_UTILS 1
+#endif
+#ifndef WITH_ASSERT
+#define WITH_ASSERT 1
 #endif
 #else
+// RELEASE
 #ifndef WITH_FILE_WATCHER
 #define WITH_FILE_WATCHER 0
 #endif
-#ifndef WITH_DX_RELEASE
-#define WITH_DX_RELEASE 0
+#ifndef WITH_DX_CLEANUP
+#define WITH_DX_CLEANUP 0
 #endif
+#ifndef WITH_FP_VALIDATION
+#define WITH_FP_VALIDATION 0
+#endif
+#ifndef WITH_FILE_UTILS
+#define WITH_FILE_UTILS 0
+#endif
+#ifndef WITH_ASSERT
+#define WITH_ASSERT 0
+#endif
+
+#endif
+
+#if WITH_ASSERT
+#include <assert.h>
+#define ASSERT(x) assert(x)
+#else
+#define ASSERT(x)
+#endif
+
+// wrap around file-watch filename, so they get compiled out
+#if WITH_FILE_WATCHER
+#define FW_STR(x) x
+#else
+#define FW_STR(x) ""
 #endif
 
 #include <windows.h>

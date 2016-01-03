@@ -325,18 +325,18 @@ def compile():
                             '/E%s' % entry_point,
                             '/Fo%s.%s' % (out_name, obj_ext),
                             '/Fc%s.%s' % (out_name, asm_ext),
-                            '/Qstrip_debug',
+                            # '/Qstrip_debug',
                             '/Qstrip_reflect',
                             '/Vd',
                             '%s.hlsl' % shader_file])
-                        inc_bin.dump_bin(out_name + '.' + obj_ext)
-
                     if res:
                         # if compilation failed, don't try again until the
                         # .hlsl file has been updated
                         print '** FAILURE: %s, %s' % (shader_file, entry_point)
                         last_fail_time[shader_file] = hlsl_file_time
                     else:
+                        if not is_debug:
+                            inc_bin.dump_bin(out_name + '.' + obj_ext)
                         parse_cbuffer(basename, entry_point, out_name, asm_ext)
                         if shader_file in last_fail_time:
                             del(last_fail_time[shader_file])
