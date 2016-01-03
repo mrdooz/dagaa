@@ -18,6 +18,8 @@
 #include "sys/events.h"
 #include "sys/msys.h"
 #include "sys/msys_graphics.hpp"
+
+#include "texturelib/texturelib.hpp"
 //----------------------------------------------------------------------------
 
 typedef struct
@@ -221,6 +223,13 @@ static int window_init(WININFO* info)
 //----------------------------------------------------------------------------
 void entrypoint(void)
 {
+  Environment defaultEnv;
+  InitDefaultEnv(&defaultEnv);
+  const char* str = "(begin "
+    "  (define out (tex 512 512))"
+    "  (fill out (col 1 1 1)))";
+
+  Cell res = EvalString(str, defaultEnv);
 
   WININFO wininfo;
   MSG msg;
@@ -252,6 +261,9 @@ void entrypoint(void)
     ExitProcess(0);
   }
 
+  ObjectHandle texture, srv;
+  tie(texture, srv) = g_Graphics->CreateTexture(defaultEnv["out"].tVal);
+
   while (!done)
   {
     while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
@@ -265,7 +277,7 @@ void entrypoint(void)
     }
 
     g_Graphics->Clear();
-    done |= intro_run();
+    done |= intro_run(srv);
     g_Graphics->Present();
   }
 

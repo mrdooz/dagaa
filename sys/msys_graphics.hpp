@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 #pragma pack(push, 1)
 struct ObjectHandle
 {
@@ -11,6 +13,9 @@ struct ObjectHandle
     BlendState,
     RasterizeState,
     DepthStencilState,
+    Texture,
+    Sampler,
+    ShaderResourceView,
   };
 
   ObjectHandle() : type(Invalid), id(0) {}
@@ -32,6 +37,7 @@ static_assert(sizeof(ObjectHandle) <= sizeof(u16), "ObjectHandle too large");
 
 extern ObjectHandle g_EmptyHandle;
 
+struct GenTexture;
 //-----------------------------------------------------------------------------
 struct DXGraphics
 {
@@ -40,7 +46,11 @@ struct DXGraphics
   void Clear();
   void Present();
 
+  std::pair<ObjectHandle, ObjectHandle> CreateTexture(const GenTexture* texture);
+  void UpdateTexture(const GenTexture* texture, ObjectHandle h);
+
   ObjectHandle CreateShader(const char* filename, const void* buf, int len, ObjectHandle::Type type);
+
   ObjectHandle ReserveHandle(ObjectHandle::Type type);
   void UpdateHandle(ObjectHandle handle, const void* buf);
 
@@ -49,6 +59,18 @@ struct DXGraphics
   {
     return (T*)_resourceData[h.id];
   }
+
+  ObjectHandle CreateSamplerState(const D3D11_SAMPLER_DESC& desc);
+
+  enum Samplers
+  {
+    Point,
+    Linear,
+    LinearWrap,
+    LinearBorder,
+  };
+
+  ObjectHandle _samplers[4];
 
   D3D_FEATURE_LEVEL _featureLevel;
   ID3D11Device* _device;

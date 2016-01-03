@@ -22,6 +22,9 @@
     <Filter Include="sys\_win32\x86">
       <UniqueIdentifier>{578e90a0-b2e7-4f0f-8851-e0381b9b44dd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="texturelib">
+      <UniqueIdentifier>{88b1879e-bb15-45ba-b2e8-568f748090d5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\sys\events.h">
@@ -68,6 +71,12 @@
     </ClInclude>
     <ClInclude Include="..\sys\_win32\msys_filewatcherOS.hpp">
       <Filter>sys\_win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sys\msys_math.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\texturelib\texturelib.hpp">
+      <Filter>texturelib</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -118,6 +127,12 @@
     </ClCompile>
     <ClCompile Include="..\main_debug.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sys\msys_math.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\texturelib\texturelib.cpp">
+      <Filter>texturelib</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

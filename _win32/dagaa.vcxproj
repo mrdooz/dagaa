@@ -79,16 +79,18 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>false</OptimizeReferences>
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <EntryPointSymbol>entrypoint</EntryPointSymbol>
       <GenerateMapFile>true</GenerateMapFile>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -101,12 +103,14 @@
     <ClInclude Include="..\sys\msys_graphics.hpp" />
     <ClInclude Include="..\sys\msys_libc.h" />
     <ClInclude Include="..\sys\msys_malloc.h" />
+    <ClInclude Include="..\sys\msys_math.hpp" />
     <ClInclude Include="..\sys\msys_random.h" />
     <ClInclude Include="..\sys\msys_sound.h" />
     <ClInclude Include="..\sys\msys_thread.h" />
     <ClInclude Include="..\sys\msys_timer.h" />
     <ClInclude Include="..\sys\msys_types.h" />
     <ClInclude Include="..\sys\_win32\msys_filewatcherOS.hpp" />
+    <ClInclude Include="..\texturelib\texturelib.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\intro.cpp" />
@@ -124,6 +128,7 @@
     <ClCompile Include="..\sys\msys.cpp" />
     <ClCompile Include="..\sys\msys_graphics.cpp" />
     <ClCompile Include="..\sys\msys_malloc.cpp" />
+    <ClCompile Include="..\sys\msys_math.cpp" />
     <ClCompile Include="..\sys\msys_random.cpp" />
     <ClCompile Include="..\sys\_win32\msys_debugOS.cpp" />
     <ClCompile Include="..\sys\_win32\msys_filewatcherOS.cpp" />
@@ -133,6 +138,7 @@
     <ClCompile Include="..\sys\_win32\msys_threadOS.cpp" />
     <ClCompile Include="..\sys\_win32\msys_timerOS.cpp" />
     <ClCompile Include="..\sys\_win32\x86\msys_libcOS.cpp" />
+    <ClCompile Include="..\texturelib\texturelib.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

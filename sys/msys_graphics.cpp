@@ -1,6 +1,9 @@
 #include "msys_graphics.hpp"
 #include "msys_libc.h"
 #include "_win32/msys_filewatcherOS.hpp"
+#include "../texturelib/texturelib.hpp"
+
+#define DEFAULTS_TO_ZERO(type, val)
 
 DXGraphics* g_Graphics;
 ObjectHandle g_EmptyHandle;
@@ -20,6 +23,79 @@ void DXGraphics::Clear()
 void DXGraphics::Present()
 {
   _swapChain->Present(_vsync ? 1 : 0, 0);
+}
+
+//-----------------------------------------------------------------------------
+static void InitTextureDesc(D3D11_TEXTURE2D_DESC* desc,
+    u32 width,
+    u32 height,
+    D3D11_USAGE usage,
+    DXGI_FORMAT fmt,
+    D3D11_BIND_FLAG bindFlag)
+{
+  msys_memset(desc, 0, sizeof(D3D11_TEXTURE2D_DESC));
+  desc->Width = width;
+  desc->Height = height;
+  desc->MipLevels = 1;
+  desc->ArraySize = 1;
+
+  desc->SampleDesc.Count = 1;
+  DEFAULTS_TO_ZERO(desc->SampleDesc.Quality, 0);
+  desc->Usage = usage;
+  //desc->Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+  desc->Format = fmt;
+  desc->BindFlags = bindFlag;
+
+  DEFAULTS_TO_ZERO(desc->CPUAccessFlags, 0);
+  DEFAULTS_TO_ZERO(desc->MiscFlags, 0);
+}
+
+//-----------------------------------------------------------------------------
+pair<ObjectHandle, ObjectHandle> DXGraphics::CreateTexture(const GenTexture* texture)
+{
+  D3D11_TEXTURE2D_DESC desc;
+  InitTextureDesc(&desc,
+      texture->width,
+      texture->height,
+      D3D11_USAGE_DEFAULT,
+      DXGI_FORMAT_R32G32B32A32_FLOAT,
+      D3D11_BIND_SHADER_RESOURCE);
+
+  D3D11_SUBRESOURCE_DATA data;
+  data.pSysMem = (void*)texture->data;
+  data.SysMemPitch = 4 * sizeof(float) * texture->width;
+  data.SysMemSlicePitch = data.SysMemPitch * texture->height;
+
+  ID3D11Texture2D* t;
+  if (SUCCEEDED(_device->CreateTexture2D(&desc, &data, &t)))
+  {
+    int n = _resourceCount;
+    _resourceData[_resourceCount] = t;
+    _resourceType[_resourceCount++] = ObjectHandle::Texture;
+
+    // create SRV
+    D3D_SRV_DIMENSION dim = D3D11_SRV_DIMENSION_TEXTURE2D;
+    CD3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = CD3D11_SHADER_RESOURCE_VIEW_DESC(dim, desc.Format);
+    if (SUCCEEDED(_device->CreateShaderResourceView(
+            t, &srvDesc, (ID3D11ShaderResourceView**)&_resourceData[_resourceCount])))
+    {
+      _resourceType[_resourceCount++] = ObjectHandle::ShaderResourceView;
+      return make_pair(ObjectHandle(ObjectHandle::Texture, n), ObjectHandle(ObjectHandle::ShaderResourceView, n+1));
+    }
+  }
+
+  return make_pair(g_EmptyHandle, g_EmptyHandle);
+}
+
+//-----------------------------------------------------------------------------
+void DXGraphics::UpdateTexture(const GenTexture* texture, ObjectHandle h)
+{
+  _context->UpdateSubresource(GetResource<ID3D11Resource>(h),
+    0,
+    nullptr,
+    (void*)texture->data,
+    4 * sizeof(float) * texture->width,
+    4 * sizeof(float) * texture->width * texture->height);
 }
 
 //-----------------------------------------------------------------------------
@@ -127,24 +203,22 @@ int DXGraphics::Init(HWND h, u32 width, u32 height)
   swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 
   swapChainDesc.SampleDesc.Count = 1;
-  swapChainDesc.SampleDesc.Quality = 0;
+  DEFAULTS_TO_ZERO(swapChainDesc.SampleDesc.Quality, 0);
 
   swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
   swapChainDesc.BufferCount = 1;
   swapChainDesc.OutputWindow = h;
   // TODO(magnus): pass in info
   swapChainDesc.Windowed = true;
-  swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-  swapChainDesc.Flags = 0;
 
   // Get the IDXGIFactory that created the device, and use that to create the swap chain
-  IDXGIDevice* dxgiDevice = 0;
+  IDXGIDevice* dxgiDevice;
   HR(_device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgiDevice));
-  IDXGIAdapter* dxgiAdapter = 0;
+  IDXGIAdapter* dxgiAdapter;
   HR(dxgiDevice->GetParent(__uuidof(IDXGIAdapter), (void**)&dxgiAdapter));
 
   // Finally got the IDXGIFactory interface.
-  IDXGIFactory* dxgiFactory = 0;
+  IDXGIFactory* dxgiFactory;
   HR(dxgiAdapter->GetParent(__uuidof(IDXGIFactory), (void**)&dxgiFactory));
 
   // Now, create the swap chain.
@@ -161,22 +235,28 @@ int DXGraphics::Init(HWND h, u32 width, u32 height)
 
   // Create depth/stencil
   D3D11_TEXTURE2D_DESC depthStencilDesc;
-  depthStencilDesc.Width = width;
-  depthStencilDesc.Height = height;
-  depthStencilDesc.MipLevels = 1;
-  depthStencilDesc.ArraySize = 1;
-  depthStencilDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-
-  depthStencilDesc.SampleDesc.Count = 1;
-  depthStencilDesc.SampleDesc.Quality = 0;
-
-  depthStencilDesc.Usage = D3D11_USAGE_DEFAULT;
-  depthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-  depthStencilDesc.CPUAccessFlags = 0;
-  depthStencilDesc.MiscFlags = 0;
+  InitTextureDesc(&depthStencilDesc,
+      width,
+      height,
+      D3D11_USAGE_DEFAULT,
+      DXGI_FORMAT_D24_UNORM_S8_UINT,
+      D3D11_BIND_DEPTH_STENCIL);
 
   HR(_device->CreateTexture2D(&depthStencilDesc, 0, &_depthStencilBuffer));
   HR(_device->CreateDepthStencilView(_depthStencilBuffer, 0, &_depthStencilView));
+
+  CD3D11_SAMPLER_DESC samplerDesc = CD3D11_SAMPLER_DESC(CD3D11_DEFAULT());
+  _samplers[Linear] = CreateSamplerState(samplerDesc);
+
+  samplerDesc.AddressU = samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+  _samplers[LinearWrap] = CreateSamplerState(samplerDesc);
+
+  samplerDesc.AddressU = samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+  _samplers[LinearBorder] = CreateSamplerState(samplerDesc);
+
+  samplerDesc.AddressU = samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+  samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+  _samplers[Point] = CreateSamplerState(samplerDesc);
 
   _context->OMSetRenderTargets(1, &_renderTargetView, _depthStencilView);
   return 1;
@@ -185,7 +265,7 @@ int DXGraphics::Init(HWND h, u32 width, u32 height)
 //-----------------------------------------------------------------------------
 void DXGraphics::Close()
 {
-#if WITH_DX_RELEASE
+#if WITH_DX_CLEANUP
   for (int i = 0; i < _resourceCount; ++i)
   {
 #define RELEASE_RESOURCE(type, klass)                                                              \
@@ -209,4 +289,15 @@ void DXGraphics::Close()
   _context->Release();
   _device->Release();
 #endif
+}
+
+//------------------------------------------------------------------------------
+ObjectHandle DXGraphics::CreateSamplerState(const D3D11_SAMPLER_DESC& desc)
+{
+  if (SUCCEEDED(_device->CreateSamplerState(&desc, (ID3D11SamplerState**)&_resourceData[_resourceCount])))
+  {
+    _resourceType[_resourceCount] = ObjectHandle::Sampler;
+    return ObjectHandle(ObjectHandle::Sampler, _resourceCount++);
+  }
+  return g_EmptyHandle;
 }

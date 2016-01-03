@@ -2,8 +2,8 @@
 // iq . 2003/2008 . code for 64 kb intros by RGBA                           //
 //--------------------------------------------------------------------------//
 
-#define XRES 800
-#define YRES 600
+#define XRES 1024
+#define YRES 768
 
 #define WIN32_LEAN_AND_MEAN
 #define WIN32_EXTRA_LEAN
@@ -12,6 +12,7 @@
 #include "sys/events.h"
 #include "sys/msys_graphics.hpp"
 #include "sys/_win32/msys_filewatcherOS.hpp"
+#include "texturelib/texturelib.hpp"
 
 //----------------------------------------------------------------------------
 
@@ -222,9 +223,9 @@ static void window_end(WININFO* info)
 
 static int window_init(WININFO* info)
 {
-  //unsigned int PixelFormat;
+  // unsigned int PixelFormat;
   DWORD dwExStyle, dwStyle;
-  //DEVMODE dmScreenSettings;
+  // DEVMODE dmScreenSettings;
   WNDCLASS wc;
   RECT rec;
 
@@ -240,14 +241,14 @@ static int window_init(WININFO* info)
 
   if (info->full)
   {
-    //msys_memset(&dmScreenSettings, 0, sizeof(DEVMODE));
-    //dmScreenSettings.dmSize = sizeof(DEVMODE);
-    //dmScreenSettings.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
-    //dmScreenSettings.dmBitsPerPel = 32;
-    //dmScreenSettings.dmPelsWidth = XRES;
-    //dmScreenSettings.dmPelsHeight = YRES;
+    // msys_memset(&dmScreenSettings, 0, sizeof(DEVMODE));
+    // dmScreenSettings.dmSize = sizeof(DEVMODE);
+    // dmScreenSettings.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
+    // dmScreenSettings.dmBitsPerPel = 32;
+    // dmScreenSettings.dmPelsWidth = XRES;
+    // dmScreenSettings.dmPelsHeight = YRES;
 
-    //if (ChangeDisplaySettings(&dmScreenSettings, CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL)
+    // if (ChangeDisplaySettings(&dmScreenSettings, CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL)
     //  return (0);
 
     dwExStyle = WS_EX_APPWINDOW;
@@ -288,10 +289,10 @@ static int window_init(WININFO* info)
   if (!(info->hDC = GetDC(info->hWnd)))
     return (0);
 
-  //if (!(PixelFormat = ChoosePixelFormat(info->hDC, &pfd)))
+  // if (!(PixelFormat = ChoosePixelFormat(info->hDC, &pfd)))
   //  return (0);
 
-  //if (!SetPixelFormat(info->hDC, PixelFormat, &pfd))
+  // if (!SetPixelFormat(info->hDC, PixelFormat, &pfd))
   //  return (0);
 
   // SetForegroundWindow( info->hWnd );    // slightly higher priority
@@ -335,10 +336,12 @@ static void DrawTime(WININFO* info, float t)
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
+  Environment defaultEnv;
+  InitDefaultEnv(&defaultEnv);
+
   MSG msg;
   int done = 0;
 
-  //    calcula(); return( 0 );
   if (!msys_debugInit())
     return 0;
 
@@ -373,6 +376,29 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR lpCmdLine,
     return (0);
   }
 
+  ObjectHandle texture;
+  ObjectHandle srv;
+  g_FileWatcher->AddFileWatch("texturelib/texture2.lisp",
+      true,
+      [&](const char* filename, const char* buf, int len)
+      {
+        char* tmp = (char*)_alloca(len + 1);
+        memcpy(tmp, buf, len);
+        tmp[len] = 0;
+        Cell res = EvalString(tmp, defaultEnv);
+        static bool created = false;
+        if (!created)
+        {
+          created = true;
+          tie(texture, srv) = g_Graphics->CreateTexture(defaultEnv["out"].tVal);
+        }
+        else
+        {
+          g_Graphics->UpdateTexture(defaultEnv["out"].tVal, texture);
+        }
+        return true;
+      });
+
   while (!done)
   {
     if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
@@ -390,7 +416,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR lpCmdLine,
       g_FileWatcher->Tick();
 #endif
       g_Graphics->Clear();
-      done = intro_run();
+      done = intro_run(srv);
 
       static long to = 0;
       if (!to)

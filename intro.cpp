@@ -79,7 +79,7 @@ void intro_end(void)
 }
 
 //-----------------------------------------------------------------------------
-int intro_run()
+int intro_run(ObjectHandle texture)
 {
   float time = (1.0f / 1000.0f) * (float)(msys_timerGet() - intro.mTo);
 
@@ -97,6 +97,11 @@ int intro_run()
   ctx->RSSetState(rasterizerState);
   ctx->OMSetDepthStencilState(depthDepthDisabledState, 0);
 
+  ID3D11SamplerState* sampler = g_Graphics->GetResource<ID3D11SamplerState>(g_Graphics->_samplers[DXGraphics::Linear]);
+  ctx->PSSetSamplers(1, 1, &sampler);
+
+  ID3D11ShaderResourceView* srv = g_Graphics->GetResource<ID3D11ShaderResourceView>(texture);
+  ctx->PSSetShaderResources(0, 1, &srv);
   ctx->Draw(6, 0);
 
   return 0;

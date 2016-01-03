@@ -1,3 +1,9 @@
+Texture2D Texture0 : register(t0);
+sampler PointSampler : register(s0);
+sampler LinearSampler : register(s1);
+sampler LinearWrap : register(s2);
+sampler LinearBorder : register(s3);
+
 //------------------------------------------------------
 struct VSQuadOut
 {
@@ -24,5 +30,10 @@ VSQuadOut VsQuad(uint vertexID : SV_VertexID)
 // entry-point: ps
 float4 PsRaytrace(VSQuadOut p) : SV_Target
 {
-  return 0.5 + 0.5 * sin(10 * p.uv.x);
+  return Texture0.Sample(LinearSampler, p.uv);
+  // float2 dim = float2(800, 600);
+  // float2 xx = 2 * (p.pos.xy / dim - 0.5);
+  // float f = 0.8 + 0.2 * atan2(xx.y, xx.x);
+  // float r = length(xx);
+  // return r;
 }
