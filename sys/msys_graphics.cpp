@@ -13,6 +13,12 @@ ObjectHandle g_EmptyHandle;
     return 0;
 
 //-----------------------------------------------------------------------------
+DXGraphics::DXGraphics()
+{
+  msys_zeromem(_resourceData, sizeof(_resourceData));
+}
+
+//-----------------------------------------------------------------------------
 void DXGraphics::Clear()
 {
   float black[4] = {0.1f, 0.1f, 0.1f, 0.1f};

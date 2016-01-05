@@ -47,6 +47,7 @@ float msys_powf(const float x, const float y);
 float msys_floorf(const float x);
 int msys_ifloorf(const float x);
 
+#define msys_zeromem(dst, size) memset(dst, 0, size)
 #define msys_memset(a, b, c) memset(a, b, c)
 #define msys_memcpy(a, b, c) memcpy(a, b, c)
 #define msys_strlen(a) strlen(a)

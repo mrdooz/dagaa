@@ -41,6 +41,7 @@ struct GenTexture;
 //-----------------------------------------------------------------------------
 struct DXGraphics
 {
+  DXGraphics();
   int Init(HWND h, u32 width, u32 height);
   void Close();
   void Clear();

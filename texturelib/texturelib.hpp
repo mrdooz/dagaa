@@ -39,24 +39,24 @@ struct FixedLinearMap
 {
   V& operator[](const K& key)
   {
-    for (int i = 0; i < data.size(); ++i)
-    {
-      if (data[i].first == key)
-        return data[i].second;
-    }
-
-    return data.push_back(pair<K,V>{key, V()}).second;
+    V* v = find(key);
+    return v ? *v : data.push_back(pair<K,V>{key, V()}).second;
   }
 
   bool contains(const K& key) const
   {
+    return !!find(key);
+  }
+
+  V* find(const K& key)
+  {
     for (int i = 0; i < data.size(); ++i)
     {
       if (data[i].first == key)
-        return true;
+        return &data[i].second;
     }
 
-    return false;
+    return nullptr;
   }
 
   FixedArray<pair<K, V>, N> data;

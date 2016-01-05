@@ -2,17 +2,25 @@
 #include <malloc.h>
 
 //----------------------------------------------------------------------------
-float Clamp(float minValue, float maxValue, float value)
+float Clamp(float value, float minValue, float maxValue)
 {
   return min(maxValue, max(minValue, value));
 }
 
 //----------------------------------------------------------------------------
 template <typename T>
-T Lerp(const T& a, const T& b, float t)
+T Lerp(float t, const T& a, const T& b)
 {
-  t = Clamp(0, 1, t);
   return a + t * (b - a);
+}
+
+//----------------------------------------------------------------------------
+float SmoothStep(float edge0, float edge1, float x)
+{
+  // Scale, bias and saturate x to 0..1 range
+  x = Clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
+  // Evaluate polynomial
+  return x*x*(3 - 2 * x);
 }
 
 //----------------------------------------------------------------------------
@@ -197,9 +205,8 @@ GenTexture* Sinus(GenTexture* texture, float freq, float amp, float power)
     static color Eval(void* ctx, GenTexture* texture, const vec2& v)
     {
       Data* data = (Data*)ctx;
-      float aa = v.y - data->amp * sinf(data->freq * v.x);
-      float r = powf(
-          Clamp(0, 1, 1 - msys_fabsf(v.y - data->amp * sinf(data->freq * v.x))), data->power);
+      float val = 1 - msys_fabsf(v.y - data->amp * sinf(data->freq * v.x));
+      float r = powf(SmoothStep(0, 1, val), data->power);
       return color{ r, r, r, 1 };
     }
   } data = { freq * 3.1415926f, amp, power };
@@ -231,8 +238,8 @@ GenTexture* LinearGradient(GenTexture* texture,
 
       // proj + dist = v => dist = v - proj
       vec2 dist = v2 - proj;
-      float t = Clamp(0, 1, powf(Length(dist), data->power));
-      return Lerp(data->colorA, data->colorB, t);
+      float t = Clamp(powf(Length(dist), data->power), 0, 1);
+      return Lerp(t, data->colorA, data->colorB);
     }
   } data = { a, dir, power, colorA, colorB };
 
@@ -254,7 +261,7 @@ GenTexture* ColorGradient(GenTexture* texture,
       Data* data = (Data*)ctx;
       color grad = GetFromCoord(data->gradientTexture, v);
       float t = grad.r;
-      return Lerp(data->colorA, data->colorB, t);
+      return Lerp(t, data->colorA, data->colorB);
     }
   } data = { gradientTexture, colorA, colorB };
 
@@ -264,18 +271,19 @@ GenTexture* ColorGradient(GenTexture* texture,
 //----------------------------------------------------------------------------
 void InitDefaultEnv(Environment* defaultEnv)
 {
-  (*defaultEnv)["pi"] = Cell(3.1415f);
-  (*defaultEnv)["fill"] = Register(&Fill);
-  (*defaultEnv)["col"] = Register(&MakeColor);
-  (*defaultEnv)["vec2"] = Register(&MakeVec2);
-  (*defaultEnv)["tex"] = Register(&MakeTexture);
-  (*defaultEnv)["radial-gradient"] = Register(&RadialGradient);
-  (*defaultEnv)["linear-gradient"] = Register(&LinearGradient);
-  (*defaultEnv)["color-gradient"] = Register(&ColorGradient);
-  (*defaultEnv)["add-scale"] = Register(&AddScale);
-  (*defaultEnv)["rotate-scale"] = Register(&RotateScale);
-  (*defaultEnv)["distort"] = Register(&Distort);
-  (*defaultEnv)["sinus"] = Register(&Sinus);
+  Environment& env = *defaultEnv;
+  env["pi"] = Cell(3.1415f);
+  env["fill"] = Register(&Fill);
+  env["col"] = Register(&MakeColor);
+  env["vec2"] = Register(&MakeVec2);
+  env["tex"] = Register(&MakeTexture);
+  env["radial-gradient"] = Register(&RadialGradient);
+  env["linear-gradient"] = Register(&LinearGradient);
+  env["color-gradient"] = Register(&ColorGradient);
+  env["add-scale"] = Register(&AddScale);
+  env["rotate-scale"] = Register(&RotateScale);
+  env["distort"] = Register(&Distort);
+  env["sinus"] = Register(&Sinus);
 }
 
 //----------------------------------------------------------------------------
