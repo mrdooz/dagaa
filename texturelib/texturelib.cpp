@@ -100,9 +100,121 @@ color GetFromCoord(const GenTexture* tex, const vec2& v)
 }
 
 //----------------------------------------------------------------------------
+template <typename Fn>
+GenTexture* PixelInvoker2(GenTexture* texture, const Fn& fn)
+{
+  int w = texture->width;
+  int h = texture->height;
+  color* tmp = new color[w*h];
+  for (int i = 0; i < h; ++i)
+  {
+    for (int j = 0; j < w; ++j)
+    {
+      vec2 v = ToCoord(j, i, texture);
+      tmp[i*w + j] = fn(v);
+    }
+  }
+  memcpy(texture->data, tmp, w * h * sizeof(color));
+  delete[] tmp;
+  return texture;
+}
+
+//----------------------------------------------------------------------------
+GenTexture* AddScale(GenTexture* a, GenTexture* b, const color& scaleA, const color& scaleB)
+{
+  return PixelInvoker2(a, [&](const vec2& v)
+  {
+    color colA = GetFromCoord(a, v);
+    color colB = GetFromCoord(b, v);
+    return
+      color{ colA.r * scaleA.r + colB.r * scaleB.r,
+      colA.g * scaleA.g + colB.g * scaleB.g,
+      colA.b * scaleA.b + colB.b * scaleB.b };
+  });
+}
+
+//----------------------------------------------------------------------------
+GenTexture* RotateScale(GenTexture* texture, float rotate, const vec2& scale)
+{
+  color* tmp = new color[texture->width*texture->height];
+  mtx2x2 mtx = mtx2x2::Rotate(rotate) * mtx2x2::Scale(scale.x, scale.y);
+
+  return PixelInvoker2(texture, [&](const vec2& v)
+  {
+    return GetFromCoord(texture, v * mtx);
+  });
+}
+
+//----------------------------------------------------------------------------
+GenTexture* Distort(GenTexture* texture, GenTexture* a, GenTexture* b, float scale)
+{
+  return PixelInvoker2(texture, [&](const vec2& v) {
+    color rr = GetFromCoord(a, v);
+    color ss = GetFromCoord(b, v);
+    mtx2x2 mtx = mtx2x2::Rotate(rr.r) * mtx2x2::Scale(ss.r * scale, ss.r * scale);
+    return GetFromCoord(texture, v * mtx);
+  });
+}
+
+//----------------------------------------------------------------------------
+GenTexture* RadialGradient(GenTexture* texture, const vec2& center, float power)
+{
+  return PixelInvoker2(texture, [&](const vec2& v) {
+    float r = powf(Distance(v, center), power);
+    return color{ r, r, r, 1 };
+  });
+}
+
+//----------------------------------------------------------------------------
+GenTexture* Sinus(GenTexture* texture, float freq, float amp, float power)
+{
+  return PixelInvoker2(texture, [&](const vec2& v) {
+    float val = 1 - msys_fabsf(v.y - amp * sinf(freq * v.x));
+    float r = powf(SmoothStep(0, 1, val), power);
+    return color{ r, r, r, 1 };
+  });
+}
+
+//----------------------------------------------------------------------------
+GenTexture* LinearGradient(GenTexture* texture,
+  const vec2& a,
+  const vec2& b,
+  float power,
+  const color& colorA,
+  const color& colorB)
+{
+  vec2 dir = Normalize(b - a);
+
+  return PixelInvoker2(texture, [&](const vec2& v) {
+    vec2 v2 = v - a;
+    vec2 proj = Dot(v2, dir) * dir;
+
+    // proj + dist = v => dist = v - proj
+    vec2 dist = v2 - proj;
+    float t = Clamp(powf(Length(dist), power), 0, 1);
+    return Lerp(t, colorA, colorB);
+  });
+}
+
+//----------------------------------------------------------------------------
+GenTexture* ColorGradient(GenTexture* texture,
+  GenTexture* gradientTexture,
+  const color& colorA,
+  const color& colorB)
+{
+  return PixelInvoker2(texture, [&](const vec2& v) {
+    color grad = GetFromCoord(gradientTexture, v);
+    float t = grad.r;
+    return Lerp(t, colorA, colorB);
+  });
+}
+
+#if 0
+//----------------------------------------------------------------------------
+template <typename Fn>
 GenTexture* PixelInvoker(void* context,
     GenTexture* texture,
-    color (*fn)(void* context, GenTexture* texture, const vec2& v))
+    const Fn& fn)
 {
   int w = texture->width;
   int h = texture->height;
@@ -123,27 +235,36 @@ GenTexture* PixelInvoker(void* context,
 //----------------------------------------------------------------------------
 GenTexture* AddScale(GenTexture* a, GenTexture* b, const color& scaleA, const color& scaleB)
 {
-  struct Data
+
+  //struct Data
+  //{
+  //  GenTexture* a;
+  //  GenTexture* b;
+  //  color scaleA;
+  //  color scaleB;
+
+  //  static color Eval(void* ctx, GenTexture*, const vec2& v)
+  //  {
+  //    Data* data = (Data*)ctx;
+  //    color colA = GetFromCoord(data->a, v);
+  //    color colB = GetFromCoord(data->b, v);
+  //    return
+  //      color{ colA.r * data->scaleA.r + colB.r * data->scaleB.r,
+  //      colA.g * data->scaleA.g + colB.g * data->scaleB.g,
+  //      colA.b * data->scaleA.b + colB.b * data->scaleB.b };
+  //  }
+  //};
+
+  //Data data = Data{ a, b, scaleA, scaleB };
+  return PixelInvoker2(a, [&](const vec2& v)
   {
-    GenTexture* a;
-    GenTexture* b;
-    color scaleA;
-    color scaleB;
-
-    static color Eval(void* ctx, GenTexture*, const vec2& v)
-    {
-      Data* data = (Data*)ctx;
-      color colA = GetFromCoord(data->a, v);
-      color colB = GetFromCoord(data->b, v);
-      return
-        color{ colA.r * data->scaleA.r + colB.r * data->scaleB.r,
-        colA.g * data->scaleA.g + colB.g * data->scaleB.g,
-        colA.b * data->scaleA.b + colB.b * data->scaleB.b };
-    }
-  };
-
-  Data data = Data{ a, b, scaleA, scaleB };
-  return PixelInvoker((void*)&data, a, Data::Eval);
+    color colA = GetFromCoord(a, v);
+    color colB = GetFromCoord(b, v);
+    return
+      color{ colA.r * scaleA.r + colB.r * scaleB.r,
+      colA.g * scaleA.g + colB.g * scaleB.g,
+      colA.b * scaleA.b + colB.b * scaleB.b };
+  });
 }
 
 //----------------------------------------------------------------------------
@@ -267,7 +388,7 @@ GenTexture* ColorGradient(GenTexture* texture,
 
   return PixelInvoker((void*)&data, texture, Data::Eval);
 }
-
+#endif
 //----------------------------------------------------------------------------
 void InitDefaultEnv(Environment* defaultEnv)
 {
