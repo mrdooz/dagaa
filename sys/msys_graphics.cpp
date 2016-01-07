@@ -15,7 +15,7 @@ ObjectHandle g_EmptyHandle;
 //-----------------------------------------------------------------------------
 DXGraphics::DXGraphics()
 {
-  msys_zeromem(_resourceData, sizeof(_resourceData));
+  msys_zeromem((void*)&_resources[0], sizeof(_resources));
 }
 
 //-----------------------------------------------------------------------------
@@ -54,6 +54,73 @@ static void InitTextureDesc(D3D11_TEXTURE2D_DESC* desc,
 
   DEFAULTS_TO_ZERO(desc->CPUAccessFlags, 0);
   DEFAULTS_TO_ZERO(desc->MiscFlags, 0);
+}
+
+//-----------------------------------------------------------------------------
+int DXGraphics::FindFreeResource(int start)
+{
+  for (int i = start; i < MAX_NUM_RESOURCES; ++i)
+  {
+    if (_resources[i].ptr == nullptr)
+      return i;
+  }
+  return -1;
+}
+
+//-----------------------------------------------------------------------------
+ObjectHandle DXGraphics::AddResource(ObjectHandle::Type type, void* resource)
+{
+  int idx = _firstFreeResource != -1 ? _firstFreeResource : FindFreeResource(0);
+  assert(idx != -1);
+  _firstFreeResource = -1;
+
+  _resources[idx] = Resource{resource, type, 0};
+  return ObjectHandle(type, idx);
+}
+
+//-----------------------------------------------------------------------------
+ObjectHandle DXGraphics::CreateRenderTarget(int width, int height, u32* col)
+{
+  D3D11_TEXTURE2D_DESC desc;
+  InitTextureDesc(&desc,
+    width,
+    height,
+    D3D11_USAGE_DEFAULT,
+    DXGI_FORMAT_R32G32B32A32_UINT,
+    D3D11_BIND_SHADER_RESOURCE);
+
+  D3D11_SUBRESOURCE_DATA data;
+  u32* tmp = nullptr;
+  if (col)
+  {
+    int len = width * height;
+    tmp = new u32[len];
+    for (int i = 0; i < len; ++i)
+    {
+      tmp[i] = *col;
+    }
+    data.pSysMem = (void*)tmp;
+    data.SysMemPitch = sizeof(u32) * width;
+    data.SysMemSlicePitch = data.SysMemPitch * height;
+  }
+
+  ID3D11Texture2D* t;
+  HRESULT hr = _device->CreateTexture2D(&desc, tmp ? &data : nullptr, &t);
+  delete [] tmp;
+  if (FAILED(hr))
+    return g_EmptyHandle;
+
+  ObjectHandle hTexture = AddResource(ObjectHandle::RenderTarget, t);
+
+  // create SRV
+  D3D_SRV_DIMENSION dim = D3D11_SRV_DIMENSION_TEXTURE2D;
+  CD3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = CD3D11_SHADER_RESOURCE_VIEW_DESC(dim, desc.Format);
+  ID3D11ShaderResourceView* srv;
+  if (FAILED(_device->CreateShaderResourceView(t, &srvDesc, &srv)))
+    return g_EmptyHandle;
+
+  ObjectHandle hSrv = AddResource(ObjectHandle::ShaderResourceView, srv);
+  return hSrv;
 }
 
 //-----------------------------------------------------------------------------

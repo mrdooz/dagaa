@@ -99,6 +99,7 @@
     <ClInclude Include="..\precompiled.hpp" />
     <ClInclude Include="..\sys\events.h" />
     <ClInclude Include="..\sys\msys.h" />
+    <ClInclude Include="..\sys\msys_arena_allocator.hpp" />
     <ClInclude Include="..\sys\msys_debug.h" />
     <ClInclude Include="..\sys\msys_font.h" />
     <ClInclude Include="..\sys\msys_graphics.hpp" />
@@ -112,6 +113,7 @@
     <ClInclude Include="..\sys\msys_types.h" />
     <ClInclude Include="..\sys\_win32\msys_filewatcherOS.hpp" />
     <ClInclude Include="..\texturelib\texturelib.hpp" />
+    <ClInclude Include="..\texturelib\texturelib2.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\intro.cpp" />
@@ -127,6 +129,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\sys\msys.cpp" />
+    <ClCompile Include="..\sys\msys_arena_allocator.cpp" />
     <ClCompile Include="..\sys\msys_graphics.cpp" />
     <ClCompile Include="..\sys\msys_malloc.cpp" />
     <ClCompile Include="..\sys\msys_math.cpp" />
@@ -140,6 +143,7 @@
     <ClCompile Include="..\sys\_win32\msys_timerOS.cpp" />
     <ClCompile Include="..\sys\_win32\x86\msys_libcOS.cpp" />
     <ClCompile Include="..\texturelib\texturelib.cpp" />
+    <ClCompile Include="..\texturelib\texturelib2.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

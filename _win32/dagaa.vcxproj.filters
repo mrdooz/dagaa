@@ -78,6 +78,12 @@
     <ClInclude Include="..\texturelib\texturelib.hpp">
       <Filter>texturelib</Filter>
     </ClInclude>
+    <ClInclude Include="..\sys\msys_arena_allocator.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\texturelib\texturelib2.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\sys\msys.cpp">
@@ -133,6 +139,12 @@
     </ClCompile>
     <ClCompile Include="..\texturelib\texturelib.cpp">
       <Filter>texturelib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sys\msys_arena_allocator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\texturelib\texturelib2.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -14,6 +14,7 @@ struct ObjectHandle
     RasterizeState,
     DepthStencilState,
     Texture,
+    RenderTarget,
     Sampler,
     ShaderResourceView,
   };
@@ -47,6 +48,8 @@ struct DXGraphics
   void Clear();
   void Present();
 
+  ObjectHandle CreateRenderTarget(int width, int height, u32* col);
+
   std::pair<ObjectHandle, ObjectHandle> CreateTexture(const GenTexture* texture);
   void UpdateTexture(const GenTexture* texture, ObjectHandle h);
 
@@ -62,6 +65,8 @@ struct DXGraphics
   }
 
   ObjectHandle CreateSamplerState(const D3D11_SAMPLER_DESC& desc);
+  ObjectHandle AddResource(ObjectHandle::Type type, void* resource);
+  int FindFreeResource(int start);
 
   enum Samplers
   {
@@ -84,10 +89,20 @@ struct DXGraphics
   ID3D11Texture2D* _depthStencilBuffer;
   ID3D11DepthStencilView* _depthStencilView;
 
+  struct Resource
+  {
+    enum Flags {
+      FlagsFree = (1 << 0),
+    };
+
+    void* ptr;
+    u32 type : 8;
+    u32 flags : 24;
+  };
+
   enum { MAX_NUM_RESOURCES = 1 << 12 };
-  const void* _resourceData[MAX_NUM_RESOURCES];
-  u8 _resourceType[MAX_NUM_RESOURCES];
-  int _resourceCount = 0;
+  Resource _resources[MAX_NUM_RESOURCES];
+  int _firstFreeResource = -1;
 
   bool _vsync = true;
 };

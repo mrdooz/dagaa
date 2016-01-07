@@ -1,5 +1,118 @@
 #include "texturelib.hpp"
 #include <malloc.h>
+#include "../sys/msys_arena_allocator.hpp"
+
+#if WITH_TEXTURE_EDITOR
+#include <vector>
+#include <string>
+#include <unordered_map>
+//----------------------------------------------------------------------------
+struct GenVar
+{
+  enum Type
+  {
+    Int,
+    Float,
+    Vec2,
+    Color,
+  };
+
+
+  GenVar(int value) : type(Int), iVar(value) {}
+  GenVar(float value) : type(Float), fVar(value) {}
+  GenVar(const vec2& value) : type(Vec2), vVar(value) {}
+  GenVar(const color& value) : type(Color), cVar(value) {}
+
+  Type type;
+
+  string name;
+  int iVar;
+  float fVar;
+  vec2 vVar;
+  color cVar;
+};
+
+//----------------------------------------------------------------------------
+struct GenBase
+{
+  int id;
+};
+
+struct GenNode : public GenBase
+{
+  enum Type
+  {
+    Create,
+    Sinus,
+    RotateScale,
+    ColorGradient,
+  };
+
+  GenNode(Type type, const vector<GenVar>& vars) : type(type), vars(vars) {}
+
+  Type type;
+  vector<GenVar> vars;
+  vector<GenNode*> inputs;
+  Type outputType;
+};
+
+struct GenNodeSinus : GenNode
+{
+  
+};
+
+//----------------------------------------------------------------------------
+template <typename... Ts>
+vector<GenVar> CreateVars(Ts... args)
+{
+  return vector<GenVar>{GenVar(args)...};
+}
+
+struct GenRenderTarget : public GenBase
+{
+  GenRenderTarget(int w, int h) : w(w), h(h) {}
+  int w, h;
+};
+
+struct GenFunc
+{
+  GenFunc()
+  {
+    allocator.Init(mem, mem+MEM_SIZE);
+  }
+
+  int GetOrCreateId(const string& str)
+  {
+    auto it = nameToIds.find(str);
+    if (it != nameToIds.end())
+      return it->second;
+
+    int id = nextId++;
+    return nameToIds[str] = id;
+  }
+
+  template <typename T, typename... Args>
+  T* CreateGenObject(const string& name, const Args&... args)
+  {
+    T* obj = allocator.New<T>(args...);
+    obj->id = GetOrCreateId(name);
+    return obj;
+  }
+
+  void AddRenderTarget(const string& name, int w, int h)
+  {
+    renderTargets.push_back(CreateGenObject<GenRenderTarget>("out", 512, 512));
+  }
+
+  enum { MEM_SIZE = 16 * 1024 };
+  char mem[MEM_SIZE];
+  ArenaAllocator allocator;
+
+  vector<GenRenderTarget*> renderTargets;
+  int nextId = 1;
+  unordered_map<string, int> nameToIds;
+};
+#endif
 
 //----------------------------------------------------------------------------
 float Clamp(float value, float minValue, float maxValue)
@@ -541,6 +654,11 @@ Cell Eval(const Cell& cell, Environment& env)
 //----------------------------------------------------------------------------
 Cell EvalString(const char* str, Environment& env)
 {
+  GenFunc g;
+  g.AddRenderTarget("out", 512, 512);
+  g.AddRenderTarget("out2", 512, 512);
+  //GenBase* n0 = g.CreateGenObject()
+  auto vv = CreateVars(10.f, 1, vec2{1, 1}, color{1, 2, 3, 4});
   TokenArray tokens = Tokenize(str, str + strlen(str));
   InplaceString* start = &tokens[0];
   InplaceString* end = &tokens[tokens.size()];
