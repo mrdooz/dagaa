@@ -1,42 +1,6 @@
 #pragma once
-
+#include "object_handle.hpp"
 #include <utility>
-
-#pragma pack(push, 1)
-struct ObjectHandle
-{
-  enum Type : u16
-  {
-    Invalid,
-    VertexShader,
-    PixelShader,
-    BlendState,
-    RasterizeState,
-    DepthStencilState,
-    Texture,
-    RenderTarget,
-    Sampler,
-    ShaderResourceView,
-  };
-
-  ObjectHandle() : type(Invalid), id(0) {}
-  ObjectHandle(Type type, u16 id) : type(type), id(id) {}
-
-  bool IsValid() const { return type != Invalid; }
-
-  union {
-    struct {
-      Type type : 4;
-      u16 id   : 12;
-    };
-    u16 raw;
-  };
-};
-#pragma pack(pop)
-
-static_assert(sizeof(ObjectHandle) <= sizeof(u16), "ObjectHandle too large");
-
-extern ObjectHandle g_EmptyHandle;
 
 struct GenTexture;
 //-----------------------------------------------------------------------------
@@ -55,18 +19,27 @@ struct DXGraphics
 
   ObjectHandle CreateShader(const char* filename, const void* buf, int len, ObjectHandle::Type type);
 
+  int CreateDevice(HWND h, u32 width, u32 height);
+  void CreateDefaultStates();
+
   ObjectHandle ReserveHandle(ObjectHandle::Type type);
-  void UpdateHandle(ObjectHandle handle, const void* buf);
+  void UpdateHandle(ObjectHandle handle, void* buf);
 
   template <typename T>
   T* GetResource(ObjectHandle h)
   {
-    return (T*)_resourceData[h.id];
+    return (T*)_resources[h.id].ptr;
   }
 
   ObjectHandle CreateSamplerState(const D3D11_SAMPLER_DESC& desc);
   ObjectHandle AddResource(ObjectHandle::Type type, void* resource);
   int FindFreeResource(int start);
+
+  bool CreateBufferInner(
+      D3D11_BIND_FLAG bind, int size, bool dynamic, const void* data, ID3D11Buffer** buffer);
+
+  ObjectHandle CreateBuffer(
+    D3D11_BIND_FLAG bind, int size, bool dynamic, const void* buf, int userData);
 
   enum Samplers
   {
@@ -89,6 +62,8 @@ struct DXGraphics
   ID3D11Texture2D* _depthStencilBuffer;
   ID3D11DepthStencilView* _depthStencilView;
 
+  CD3D11_VIEWPORT _viewport;
+
   struct Resource
   {
     enum Flags {
@@ -107,4 +82,10 @@ struct DXGraphics
   bool _vsync = true;
 };
 
+extern ObjectHandle g_DefaultBlendState;
+extern ObjectHandle g_DefaultRasterizerState;
+extern ObjectHandle g_DefaultDepthStencilState;
+extern ObjectHandle g_DepthDisabledState;
+
 extern DXGraphics* g_Graphics;
+

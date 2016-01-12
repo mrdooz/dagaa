@@ -30,6 +30,13 @@
 #endif
 #endif
 
+// wrap around file-watch filename, so they get compiled out
+#if WITH_FILE_WATCHER
+#define FW_STR(x) x
+#else
+#define FW_STR(x) ""
+#endif
+
 #include <windows.h>
 #include <mmsystem.h>
 #include <string.h>

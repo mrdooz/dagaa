@@ -654,11 +654,13 @@ Cell Eval(const Cell& cell, Environment& env)
 //----------------------------------------------------------------------------
 Cell EvalString(const char* str, Environment& env)
 {
+#if WITH_TEXTURE_EDITOR
   GenFunc g;
   g.AddRenderTarget("out", 512, 512);
   g.AddRenderTarget("out2", 512, 512);
   //GenBase* n0 = g.CreateGenObject()
   auto vv = CreateVars(10.f, 1, vec2{1, 1}, color{1, 2, 3, 4});
+#endif
   TokenArray tokens = Tokenize(str, str + strlen(str));
   InplaceString* start = &tokens[0];
   InplaceString* end = &tokens[tokens.size()];

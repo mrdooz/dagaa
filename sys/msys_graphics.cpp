@@ -8,9 +8,66 @@
 DXGraphics* g_Graphics;
 ObjectHandle g_EmptyHandle;
 
+ObjectHandle g_DefaultBlendState;
+ObjectHandle g_DefaultRasterizerState;
+ObjectHandle g_DefaultDepthStencilState;
+ObjectHandle g_DepthDisabledState;
+
 #define HR(x)                                                                                      \
   if (FAILED(x))                                                                                   \
     return 0;
+
+//------------------------------------------------------------------------------
+bool DXGraphics::CreateBufferInner(
+    D3D11_BIND_FLAG bind, int size, bool dynamic, const void* data, ID3D11Buffer** buffer)
+{
+  CD3D11_BUFFER_DESC desc(((size + 15) & ~0xf),
+    bind,
+    dynamic ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_DEFAULT,
+    dynamic ? D3D11_CPU_ACCESS_WRITE : 0);
+
+  HRESULT hr;
+  if (data)
+  {
+    D3D11_SUBRESOURCE_DATA init_data;
+    ZeroMemory(&init_data, sizeof(init_data));
+    init_data.pSysMem = data;
+    hr = _device->CreateBuffer(&desc, &init_data, buffer);
+  }
+  else
+  {
+    hr = _device->CreateBuffer(&desc, nullptr, buffer);
+  }
+
+  return SUCCEEDED(hr);
+}
+
+//------------------------------------------------------------------------------
+ObjectHandle DXGraphics::CreateBuffer(
+    D3D11_BIND_FLAG bind, int size, bool dynamic, const void* buf, int userData)
+{
+  ID3D11Buffer* buffer = 0;
+  if (CreateBufferInner(bind, size, dynamic, buf, &buffer))
+  {
+    if (bind == D3D11_BIND_INDEX_BUFFER)
+    {
+      return AddResource(ObjectHandle::IndexBuffer, buffer);
+    }
+    else if (bind == D3D11_BIND_VERTEX_BUFFER)
+    {
+      return AddResource(ObjectHandle::VertexBuffer, buffer);
+    }
+    else if (bind == D3D11_BIND_CONSTANT_BUFFER)
+    {
+      return AddResource(ObjectHandle::ConstantBuffer, buffer);
+    }
+    else
+    {
+      // LOG_ERROR_LN("Implement me!");
+    }
+  }
+  return g_EmptyHandle;
+}
 
 //-----------------------------------------------------------------------------
 DXGraphics::DXGraphics()
@@ -142,18 +199,16 @@ pair<ObjectHandle, ObjectHandle> DXGraphics::CreateTexture(const GenTexture* tex
   ID3D11Texture2D* t;
   if (SUCCEEDED(_device->CreateTexture2D(&desc, &data, &t)))
   {
-    int n = _resourceCount;
-    _resourceData[_resourceCount] = t;
-    _resourceType[_resourceCount++] = ObjectHandle::Texture;
+    ObjectHandle hTexture = AddResource(ObjectHandle::Texture, t);
 
     // create SRV
     D3D_SRV_DIMENSION dim = D3D11_SRV_DIMENSION_TEXTURE2D;
     CD3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = CD3D11_SHADER_RESOURCE_VIEW_DESC(dim, desc.Format);
-    if (SUCCEEDED(_device->CreateShaderResourceView(
-            t, &srvDesc, (ID3D11ShaderResourceView**)&_resourceData[_resourceCount])))
+    ID3D11ShaderResourceView* srv;
+    if (SUCCEEDED(_device->CreateShaderResourceView(t, &srvDesc, &srv)))
     {
-      _resourceType[_resourceCount++] = ObjectHandle::ShaderResourceView;
-      return make_pair(ObjectHandle(ObjectHandle::Texture, n), ObjectHandle(ObjectHandle::ShaderResourceView, n+1));
+      ObjectHandle hSrv = AddResource(ObjectHandle::ShaderResourceView, srv);
+      return make_pair(hTexture, hSrv);
     }
   }
 
@@ -195,12 +250,9 @@ ObjectHandle DXGraphics::CreateShader(
         });
     return h;
 #else
-    if (SUCCEEDED(_device->CreateVertexShader(
-            buf, len, nullptr, (ID3D11VertexShader**)&_resourceData[_resourceCount])))
-    {
-      _resourceType[_resourceCount] = type;
-      return ObjectHandle(type, _resourceCount++);
-    }
+    ID3D11VertexShader* vs;
+    if (SUCCEEDED(_device->CreateVertexShader(buf, len, nullptr, &vs)))
+      return AddResource(type, vs);
 #endif
   }
   else if (type == ObjectHandle::PixelShader)
@@ -220,32 +272,16 @@ ObjectHandle DXGraphics::CreateShader(
         });
     return h;
 #else
-    if (SUCCEEDED(_device->CreatePixelShader(
-            buf, len, nullptr, (ID3D11PixelShader**)&_resourceData[_resourceCount])))
-    {
-      _resourceType[_resourceCount] = type;
-      return ObjectHandle(type, _resourceCount++);
-    }
+    ID3D11PixelShader* ps;
+    if (SUCCEEDED(_device->CreatePixelShader(buf, len, nullptr, &ps)))
+      return AddResource(type, ps);
 #endif
   }
   return g_EmptyHandle;
 }
 
 //-----------------------------------------------------------------------------
-ObjectHandle DXGraphics::ReserveHandle(ObjectHandle::Type type)
-{
-  _resourceType[_resourceCount] = type;
-  return ObjectHandle(type, _resourceCount++);
-}
-
-//-----------------------------------------------------------------------------
-void DXGraphics::UpdateHandle(ObjectHandle handle, const void* buf)
-{
-  _resourceData[handle.id] = buf;
-}
-
-//-----------------------------------------------------------------------------
-int DXGraphics::Init(HWND h, u32 width, u32 height)
+int DXGraphics::CreateDevice(HWND h, u32 width, u32 height)
 {
   u32 flags = D3D11_CREATE_DEVICE_SINGLETHREADED;
 #ifdef _DEBUG
@@ -255,15 +291,15 @@ int DXGraphics::Init(HWND h, u32 width, u32 height)
 
   // Create device
   HR(D3D11CreateDevice(nullptr,
-      D3D_DRIVER_TYPE_HARDWARE,
-      0,
-      flags,
-      0,
-      0,
-      D3D11_SDK_VERSION,
-      &_device,
-      &_featureLevel,
-      &_context));
+    D3D_DRIVER_TYPE_HARDWARE,
+    0,
+    flags,
+    0,
+    0,
+    D3D11_SDK_VERSION,
+    &_device,
+    &_featureLevel,
+    &_context));
 
   // Create swap chain
   DXGI_SWAP_CHAIN_DESC swapChainDesc;
@@ -309,14 +345,44 @@ int DXGraphics::Init(HWND h, u32 width, u32 height)
   // Create depth/stencil
   D3D11_TEXTURE2D_DESC depthStencilDesc;
   InitTextureDesc(&depthStencilDesc,
-      width,
-      height,
-      D3D11_USAGE_DEFAULT,
-      DXGI_FORMAT_D24_UNORM_S8_UINT,
-      D3D11_BIND_DEPTH_STENCIL);
+    width,
+    height,
+    D3D11_USAGE_DEFAULT,
+    DXGI_FORMAT_D24_UNORM_S8_UINT,
+    D3D11_BIND_DEPTH_STENCIL);
 
   HR(_device->CreateTexture2D(&depthStencilDesc, 0, &_depthStencilBuffer));
   HR(_device->CreateDepthStencilView(_depthStencilBuffer, 0, &_depthStencilView));
+
+  _viewport = CD3D11_VIEWPORT(0.f, 0.f, (float)width, (float)height);
+
+  return 1;
+}
+
+//-----------------------------------------------------------------------------
+void DXGraphics::CreateDefaultStates()
+{
+  ID3D11BlendState* blendState;
+  D3D11_BLEND_DESC blendDesc = CD3D11_BLEND_DESC(CD3D11_DEFAULT());
+  g_Graphics->_device->CreateBlendState(&blendDesc, &blendState);
+  g_DefaultBlendState = AddResource(ObjectHandle::BlendState, blendState);
+
+  ID3D11RasterizerState* rasterizerState;
+  D3D11_RASTERIZER_DESC rasterizerDesc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
+  g_Graphics->_device->CreateRasterizerState(&rasterizerDesc, &rasterizerState);
+  g_DefaultRasterizerState = AddResource(ObjectHandle::RasterizeState, rasterizerState);
+
+  ID3D11DepthStencilState* depthStencilState;
+  D3D11_DEPTH_STENCIL_DESC depthStencilDesc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
+  g_Graphics->_device->CreateDepthStencilState(&depthStencilDesc, &depthStencilState);
+  g_DefaultDepthStencilState = AddResource(ObjectHandle::DepthStencilState, depthStencilState);
+
+  ID3D11DepthStencilState* depthDisabledStencilState;
+  D3D11_DEPTH_STENCIL_DESC depthDescDepthDisabled = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
+  depthDescDepthDisabled = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
+  depthDescDepthDisabled.DepthEnable = FALSE;
+  g_Graphics->_device->CreateDepthStencilState(&depthDescDepthDisabled, &depthDisabledStencilState);
+  g_DepthDisabledState = AddResource(ObjectHandle::DepthStencilState, depthDisabledStencilState);
 
   CD3D11_SAMPLER_DESC samplerDesc = CD3D11_SAMPLER_DESC(CD3D11_DEFAULT());
   _samplers[Linear] = CreateSamplerState(samplerDesc);
@@ -330,6 +396,28 @@ int DXGraphics::Init(HWND h, u32 width, u32 height)
   samplerDesc.AddressU = samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
   samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
   _samplers[Point] = CreateSamplerState(samplerDesc);
+}
+
+//-----------------------------------------------------------------------------
+ObjectHandle DXGraphics::ReserveHandle(ObjectHandle::Type type)
+{
+  return ObjectHandle(type, FindFreeResource(0));
+}
+
+//-----------------------------------------------------------------------------
+void DXGraphics::UpdateHandle(ObjectHandle handle, void* buf)
+{
+  _resources[handle.id] = Resource{buf, handle.type, 0};
+}
+
+//-----------------------------------------------------------------------------
+int DXGraphics::Init(HWND h, u32 width, u32 height)
+{
+  int res = CreateDevice(h, width, height);
+  if (res)
+    return res;
+
+  CreateDefaultStates();
 
   _context->OMSetRenderTargets(1, &_renderTargetView, _depthStencilView);
   return 1;
@@ -339,11 +427,11 @@ int DXGraphics::Init(HWND h, u32 width, u32 height)
 void DXGraphics::Close()
 {
 #if WITH_DX_CLEANUP
-  for (int i = 0; i < _resourceCount; ++i)
+  for (int i = 0; i < MAX_NUM_RESOURCES; ++i)
   {
 #define RELEASE_RESOURCE(type, klass)                                                              \
-  case ObjectHandle::type: ((klass*)_resourceData[i])->Release(); break;
-    switch (_resourceType[i])
+  case ObjectHandle::type: ((klass*)_resources[i].ptr)->Release(); break;
+    switch (_resources[i].type)
     {
       RELEASE_RESOURCE(VertexShader, ID3D11VertexShader);
       RELEASE_RESOURCE(PixelShader, ID3D11PixelShader);
@@ -367,10 +455,9 @@ void DXGraphics::Close()
 //------------------------------------------------------------------------------
 ObjectHandle DXGraphics::CreateSamplerState(const D3D11_SAMPLER_DESC& desc)
 {
-  if (SUCCEEDED(_device->CreateSamplerState(&desc, (ID3D11SamplerState**)&_resourceData[_resourceCount])))
-  {
-    _resourceType[_resourceCount] = ObjectHandle::Sampler;
-    return ObjectHandle(ObjectHandle::Sampler, _resourceCount++);
-  }
-  return g_EmptyHandle;
+  ID3D11SamplerState* ss;
+  if (FAILED(_device->CreateSamplerState(&desc, &ss)))
+    return g_EmptyHandle;
+
+  return AddResource(ObjectHandle::Sampler, ss);
 }

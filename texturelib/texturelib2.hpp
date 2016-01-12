@@ -1,3 +1,7 @@
 #pragma once
 
-void GenerateTexture(const char* buf, int len);
+namespace TextureLib
+{
+  bool Init();
+  void GenerateTexture(const char* buf, int len);
+}

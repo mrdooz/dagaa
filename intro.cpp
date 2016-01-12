@@ -5,6 +5,7 @@
 #include "sys/msys.h"
 #include "sys/msys_graphics.hpp"
 #include "intro.h"
+#include "texturelib/texturelib2.hpp"
 #include "shaders/out/raytrace_PsRaytrace.pso.hpp"
 #include "shaders/out/raytrace_VsQuad.vso.hpp"
 
@@ -19,12 +20,6 @@ typedef struct
 //--------------------------------------------------------
 static IntroObject intro;
 
-ID3D11BlendState* blendState;
-ID3D11RasterizerState* rasterizerState;
-ID3D11DepthStencilState* depthStencilState;
-
-ID3D11DepthStencilState* depthDepthDisabledState;
-
 #if WITH_FILE_WATCHER
 #define FW_STR(x) x
 #else
@@ -35,6 +30,9 @@ int intro_init(int xr, int yr, int nomusic, IntroProgressDelegate* pd)
 {
   // progress report, (from 0 to 200)
   pd->func(pd->obj, 0);
+
+  if (!TextureLib::Init())
+    return 1;
 
   // init your stuff here (mzk player, intro, ...)
   // remember to call pd->func() regularly to update the loading bar
@@ -52,20 +50,6 @@ int intro_init(int xr, int yr, int nomusic, IntroProgressDelegate* pd)
   {
     return 0;
   }
-
-  D3D11_BLEND_DESC blendDesc = CD3D11_BLEND_DESC(CD3D11_DEFAULT());
-  g_Graphics->_device->CreateBlendState(&blendDesc, &blendState);
-
-  D3D11_RASTERIZER_DESC rasterizerDesc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
-  g_Graphics->_device->CreateRasterizerState(&rasterizerDesc, &rasterizerState);
-
-  D3D11_DEPTH_STENCIL_DESC depthStencilDesc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
-  g_Graphics->_device->CreateDepthStencilState(&depthStencilDesc, &depthStencilState);
-
-  D3D11_DEPTH_STENCIL_DESC depthDescDepthDisabled = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
-  depthDescDepthDisabled = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
-  depthDescDepthDisabled.DepthEnable = FALSE;
-  g_Graphics->_device->CreateDepthStencilState(&depthDescDepthDisabled, &depthDepthDisabledState);
 
   pd->func(pd->obj, 200);
 
@@ -93,11 +77,14 @@ int intro_run(ObjectHandle texture)
   ctx->RSSetViewports(1, &viewport);
 
   float blendFactor[4] = { 1, 1, 1, 1 };
-  ctx->OMSetBlendState(blendState, blendFactor, 0xffffffff);
-  ctx->RSSetState(rasterizerState);
-  ctx->OMSetDepthStencilState(depthDepthDisabledState, 0);
+  ctx->OMSetBlendState(
+      g_Graphics->GetResource<ID3D11BlendState>(g_DefaultBlendState), blendFactor, 0xffffffff);
+  ctx->RSSetState(g_Graphics->GetResource<ID3D11RasterizerState>(g_DefaultRasterizerState));
+  ctx->OMSetDepthStencilState(
+      g_Graphics->GetResource<ID3D11DepthStencilState>(g_DepthDisabledState), 0);
 
-  ID3D11SamplerState* sampler = g_Graphics->GetResource<ID3D11SamplerState>(g_Graphics->_samplers[DXGraphics::Linear]);
+  ID3D11SamplerState* sampler =
+      g_Graphics->GetResource<ID3D11SamplerState>(g_Graphics->_samplers[DXGraphics::Linear]);
   ctx->PSSetSamplers(1, 1, &sampler);
 
   ID3D11ShaderResourceView* srv = g_Graphics->GetResource<ID3D11ShaderResourceView>(texture);

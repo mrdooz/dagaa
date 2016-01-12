@@ -84,6 +84,15 @@
     <ClInclude Include="..\texturelib\texturelib2.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\sys\msys_containers.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sys\object_handle.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sys\flags.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\sys\msys.cpp">
@@ -144,6 +153,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\texturelib\texturelib2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sys\gpu_objects.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,5 +1,9 @@
 #include "texturelib2.hpp"
 #include "../sys/msys_graphics.hpp"
+#include "../sys/msys_containers.hpp"
+#include <shaders/out/tl_common_VsQuad.vso.hpp>
+#include <shaders/out/tl_basic_PsFill.pso.hpp>
+#include <shaders/out/tl_arith_PsModulate.pso.hpp>
 
 namespace TextureLib
 {
@@ -7,6 +11,7 @@ namespace TextureLib
   {
     CreateTexture,
     Modulate,
+    NumCommands
   };
 
  struct CreateTextureVars
@@ -25,10 +30,10 @@ namespace TextureLib
    float factorB;
  };
 
-};
+ static FixedLinearMap<Command, ObjectHandle, NumCommands> g_Shaders;
+ ObjectHandle g_vsFullScreen;
 
-namespace TextureLib
-{
+ //-----------------------------------------------------------------------------
   template <typename T>
   T Read(const char** ptr)
   {
@@ -37,8 +42,31 @@ namespace TextureLib
     return tmp;
   }
 
+  //-----------------------------------------------------------------------------
+  bool Init()
+  {
+    g_vsFullScreen = g_Graphics->CreateShader(FW_STR("shaders/out/tl_common_VsQuadD.vso"),
+      tl_common_VsQuad_bin,
+      sizeof(tl_common_VsQuad_bin),
+      ObjectHandle::VertexShader);
+
+#define LOAD_PS(cmd, filename, bin) \
+    g_Shaders[cmd] = g_Graphics->CreateShader( \
+      FW_STR("shaders/out/" filename ".pso"), \
+      bin,  \
+      sizeof(bin), \
+      ObjectHandle::PixelShader);
+
+    LOAD_PS(Command::CreateTexture, "tl_basic_PsFillD", tl_basic_PsFill_bin);
+    LOAD_PS(Command::Modulate, "tl_arith_PsModulateD", tl_arith_PsModulate_bin);
+
+    return true;
+  }
+
+  //-----------------------------------------------------------------------------
   void GenerateTexture(const char* buf, int len)
   {
+    FixedLinearMap<int, ObjectHandle, 256> renderTargets;
       
     const char* cur = buf;
     const char* end = cur + len;
@@ -49,7 +77,7 @@ namespace TextureLib
       if (cmd == CreateTexture)
       {
         CreateTextureVars vars = Read<CreateTextureVars>(&cur);
-        g_Graphics->CreateRenderTarget(vars.w, vars.h, &vars.col);
+        renderTargets[vars.id] = g_Graphics->CreateRenderTarget(vars.w, vars.h, &vars.col);
       }
       else if (cmd == Modulate)
       {

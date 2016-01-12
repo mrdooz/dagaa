@@ -45,7 +45,7 @@ private:
   unordered_map<string, WatchedDir*> _watchesByDir;
   unordered_map<const CallbackContext*, u32> _lastUpdate;
 
-  uint32_t _nextId = 0;
+  WatchId _nextId = 0;
 
   enum
   {
