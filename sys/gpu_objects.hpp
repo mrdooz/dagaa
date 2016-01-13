@@ -1,6 +1,6 @@
 #pragma once
-#include "object_handle.hpp"
 #include "flags.hpp"
+#include "object_handle.hpp"
 
 class GraphicsContext;
 
@@ -10,26 +10,27 @@ class GraphicsContext;
 //------------------------------------------------------------------------------
 struct GpuObjects
 {
-  bool CreateDynamic(
-    u32 ibSize, DXGI_FORMAT ibFormat,
-    u32 vbSize, u32 vbElemSize);
+  bool CreateDynamic(u32 ibSize, DXGI_FORMAT ibFormat, u32 vbSize, u32 vbElemSize);
 
-  bool CreateDynamic(
-    u32 ibSize, DXGI_FORMAT ibFormat, const  void* ibData,
-    u32 vbSize, u32 vbElemSize, const  void* vbData);
+  bool CreateDynamic(u32 ibSize,
+      DXGI_FORMAT ibFormat,
+      const void* ibData,
+      u32 vbSize,
+      u32 vbElemSize,
+      const void* vbData);
 
-  bool CreateDynamicVb(u32 vbSize, u32 vbElemSize, const  void* vbData = nullptr);
-  bool CreateDynamicIb(u32 ibSize, DXGI_FORMAT ibFormat, const  void* ibData = nullptr);
+  bool CreateDynamicVb(u32 vbSize, u32 vbElemSize, const void* vbData = nullptr);
+  bool CreateDynamicIb(u32 ibSize, DXGI_FORMAT ibFormat, const void* ibData = nullptr);
 
-  bool CreateVertexBuffer(u32 vbSize, u32 vbElemSize, const  void* vbData);
-  bool CreateIndexBuffer(u32 ibSize, DXGI_FORMAT ibFormat, const  void* ibData);
+  bool CreateVertexBuffer(u32 vbSize, u32 vbElemSize, const void* vbData);
+  bool CreateIndexBuffer(u32 ibSize, DXGI_FORMAT ibFormat, const void* ibData);
 
-  //bool LoadVertexShader(const char* filename,
+  // bool LoadVertexShader(const char* filename,
   //    const char* entryPoint,
   //    u32 flags = 0,
   //    vector<D3D11_INPUT_ELEMENT_DESC>* elements = nullptr);
-  //bool LoadPixelShader(const char* filename, const char* entryPoint);
-  //bool LoadGeometryShader(const char* filename, const char* entryPoint);
+  // bool LoadPixelShader(const char* filename, const char* entryPoint);
+  // bool LoadGeometryShader(const char* filename, const char* entryPoint);
 
   D3D11_PRIMITIVE_TOPOLOGY _topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
@@ -66,10 +67,9 @@ struct ConstantBuffer : public T
 struct GpuState
 {
   // Passing 0 uses the default settings
-  bool Create(
-    const  D3D11_DEPTH_STENCIL_DESC* dssDesc = nullptr,
-    const  D3D11_BLEND_DESC* blendDesc = nullptr,
-    const  D3D11_RASTERIZER_DESC* rasterizerDesc = nullptr);
+  bool Create(const D3D11_DEPTH_STENCIL_DESC* dssDesc = nullptr,
+      const D3D11_BLEND_DESC* blendDesc = nullptr,
+      const D3D11_RASTERIZER_DESC* rasterizerDesc = nullptr);
 
   ObjectHandle _depthStencilState;
   ObjectHandle _blendState;
@@ -99,8 +99,10 @@ struct GpuBundle
 struct BundleOptions
 {
   BundleOptions();
-  struct OptionFlag {
-    enum Enum {
+  struct OptionFlag
+  {
+    enum Enum
+    {
       DepthStencilDesc = 1 << 0,
       BlendDesc = 1 << 1,
       RasterizerDesc = 1 << 2,
@@ -110,7 +112,8 @@ struct BundleOptions
       StaticIb = 1 << 6,
     };
 
-    struct Bits {
+    struct Bits
+    {
       u32 depthStencilDesc : 1;
       u32 blendDesc : 1;
       u32 rasterizerDesc : 1;
@@ -131,8 +134,8 @@ struct BundleOptions
   BundleOptions& ComputeShader(const char* filename, const char* entrypoint);
 
   BundleOptions& VertexFlags(u32 flags);
-  //BundleOptions& InputElements(const vector<D3D11_INPUT_ELEMENT_DESC>& elems);
-  //BundleOptions& InputElement(const bristol::CD3D11_INPUT_ELEMENT_DESC& elem);
+  // BundleOptions& InputElements(const vector<D3D11_INPUT_ELEMENT_DESC>& elems);
+  // BundleOptions& InputElement(const bristol::CD3D11_INPUT_ELEMENT_DESC& elem);
   BundleOptions& Topology(D3D11_PRIMITIVE_TOPOLOGY topology);
 
   // TODO: hmm, can the element size be inferred from the input elements?
@@ -140,8 +143,8 @@ struct BundleOptions
   BundleOptions& DynamicIb(int numElements, int elementSize);
   BundleOptions& StaticVb(int numElements, int elementSize, void* vertices);
   BundleOptions& StaticIb(int numElements, int elementSize, void* indices);
-  //template <typename T>
-  //BundleOptions& StaticIb(const vector<T>& elems)
+  // template <typename T>
+  // BundleOptions& StaticIb(const vector<T>& elems)
   //{
   //  return StaticIb((int)elems.size(), sizeof(T), (void*)elems.data());
   //}
@@ -160,7 +163,7 @@ struct BundleOptions
   const char* csEntry = nullptr;
 
   u32 vertexFlags = 0;
-  //vector<D3D11_INPUT_ELEMENT_DESC> inputElements;
+  // vector<D3D11_INPUT_ELEMENT_DESC> inputElements;
 
   D3D11_PRIMITIVE_TOPOLOGY topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 

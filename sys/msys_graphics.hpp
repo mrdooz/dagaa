@@ -19,6 +19,10 @@ struct DXGraphics
 
   ObjectHandle CreateShader(const char* filename, const void* buf, int len, ObjectHandle::Type type);
 
+  ObjectHandle CreateBlendState(const D3D11_BLEND_DESC& desc);
+  ObjectHandle CreateRasterizerState(const D3D11_RASTERIZER_DESC& desc);
+  ObjectHandle CreateDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& desc);
+
   int CreateDevice(HWND h, u32 width, u32 height);
   void CreateDefaultStates();
 
@@ -39,7 +43,14 @@ struct DXGraphics
       D3D11_BIND_FLAG bind, int size, bool dynamic, const void* data, ID3D11Buffer** buffer);
 
   ObjectHandle CreateBuffer(
-    D3D11_BIND_FLAG bind, int size, bool dynamic, const void* buf, int userData);
+    D3D11_BIND_FLAG bind, int size, bool dynamic, const void* buf);
+
+  template <typename T>
+  T* MapWriteDiscard(ObjectHandle h, int* pitch = nullptr);
+  HRESULT Map(ObjectHandle h, UINT sub, D3D11_MAP type, UINT flags, D3D11_MAPPED_SUBRESOURCE *res);
+  void Unmap(ObjectHandle h, UINT sub = 0);
+
+  void CopyToBuffer(ObjectHandle h, const void* data, u32 len);
 
   enum Samplers
   {

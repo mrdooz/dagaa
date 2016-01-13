@@ -57,9 +57,9 @@ int intro_init(int xr, int yr, int nomusic, IntroProgressDelegate* pd)
   return 1;
 }
 
+//-----------------------------------------------------------------------------
 void intro_end(void)
 {
-  // deallicate your stuff here
 }
 
 //-----------------------------------------------------------------------------

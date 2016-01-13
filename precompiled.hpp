@@ -30,6 +30,8 @@
 #endif
 #endif
 
+#define WITH_FILE_UTILS 1
+
 // wrap around file-watch filename, so they get compiled out
 #if WITH_FILE_WATCHER
 #define FW_STR(x) x

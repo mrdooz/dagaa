@@ -1,9 +1,9 @@
 #include "tl_common.hlsl"
 
-cbuffer cbAddScale : register(c0)
+cbuffer cbModulate : register(c0)
 {
-  float4 factorA;
-  float4 factorB;
+  float factorA;
+  float factorB;
 };
 
 //------------------------------------------------------

@@ -1,6 +1,6 @@
 #include "gpu_objects.hpp"
-#include <sys/msys_graphics.hpp>
 #include <assert.h>
+#include <sys/msys_graphics.hpp>
 
 //------------------------------------------------------------------------------
 bool GpuObjects::CreateDynamic(u32 ibSize, DXGI_FORMAT ibFormat, u32 vbSize, u32 vbElemSize)
@@ -9,8 +9,12 @@ bool GpuObjects::CreateDynamic(u32 ibSize, DXGI_FORMAT ibFormat, u32 vbSize, u32
 }
 
 //------------------------------------------------------------------------------
-bool GpuObjects::CreateDynamic(
-    u32 ibSize, DXGI_FORMAT ibFormat, const void* ibData, u32 vbSize, u32 vbElemSize, const void* vbData)
+bool GpuObjects::CreateDynamic(u32 ibSize,
+    DXGI_FORMAT ibFormat,
+    const void* ibData,
+    u32 vbSize,
+    u32 vbElemSize,
+    const void* vbData)
 {
   return CreateDynamicIb(ibSize, ibFormat, ibData) && CreateDynamicVb(vbSize, vbElemSize, vbData);
 }
@@ -21,7 +25,7 @@ bool GpuObjects::CreateDynamicVb(u32 vbSize, u32 vbElemSize, const void* vbData)
   _vbSize = vbSize;
   _vbElemSize = vbElemSize;
   _numVerts = _vbSize / _vbElemSize;
-  _vb = g_Graphics->CreateBuffer(D3D11_BIND_VERTEX_BUFFER, vbSize, true, vbData, vbElemSize);
+  _vb = g_Graphics->CreateBuffer(D3D11_BIND_VERTEX_BUFFER, vbSize, true, vbData);
   return _vb.IsValid();
 }
 
@@ -30,9 +34,7 @@ bool GpuObjects::CreateDynamicIb(u32 ibSize, DXGI_FORMAT ibFormat, const void* i
 {
   _ibSize = ibSize;
   _ibFormat = ibFormat;
-  assert(!"magnus implement this!");
-  //_numIndices = _ibSize / IndexSizeFromFormat(ibFormat);
-  _ib = g_Graphics->CreateBuffer(D3D11_BIND_INDEX_BUFFER, ibSize, true, ibData, ibFormat);
+  _ib = g_Graphics->CreateBuffer(D3D11_BIND_INDEX_BUFFER, ibSize, true, ibData);
   return _ib.IsValid();
 }
 
@@ -42,7 +44,7 @@ bool GpuObjects::CreateVertexBuffer(u32 vbSize, u32 vbElemSize, const void* vbDa
   _vbSize = vbSize;
   _vbElemSize = vbElemSize;
   _numVerts = _vbSize / _vbElemSize;
-  _vb = g_Graphics->CreateBuffer(D3D11_BIND_VERTEX_BUFFER, vbSize, false, vbData, vbElemSize);
+  _vb = g_Graphics->CreateBuffer(D3D11_BIND_VERTEX_BUFFER, vbSize, false, vbData);
   return _vb.IsValid();
 }
 
@@ -51,15 +53,14 @@ bool GpuObjects::CreateIndexBuffer(u32 ibSize, DXGI_FORMAT ibFormat, const void*
 {
   _ibSize = ibSize;
   _ibFormat = ibFormat;
-  assert(!"magnus implement this!");
-  //_numIndices = _ibSize / IndexSizeFromFormat(ibFormat);
-  _ib = g_Graphics->CreateBuffer(D3D11_BIND_INDEX_BUFFER, ibSize, false, ibData, ibFormat);
+  _ib = g_Graphics->CreateBuffer(D3D11_BIND_INDEX_BUFFER, ibSize, false, ibData);
   return _ib.IsValid();
 }
 
 //------------------------------------------------------------------------------
-//bool GpuObjects::LoadVertexShader(
-//    const char* filename, const char* entryPoint, u32 flags, vector<D3D11_INPUT_ELEMENT_DESC>* elements)
+// bool GpuObjects::LoadVertexShader(
+//    const char* filename, const char* entryPoint, u32 flags, vector<D3D11_INPUT_ELEMENT_DESC>*
+//    elements)
 //{
 //  BEGIN_INIT_SEQUENCE();
 //  ObjectHandle* layout = (flags || elements) ? &_layout : nullptr;
@@ -68,7 +69,8 @@ bool GpuObjects::CreateIndexBuffer(u32 ibSize, DXGI_FORMAT ibFormat, const void*
 //  {
 //    vector<D3D11_INPUT_ELEMENT_DESC> desc;
 //    VertexFlagsToLayoutDesc(flags, &desc);
-//    INIT_RESOURCE(_vs, g_Graphics->LoadVertexShaderFromFile(filename, entryPoint, &_layout, &desc));
+//    INIT_RESOURCE(_vs, g_Graphics->LoadVertexShaderFromFile(filename, entryPoint, &_layout,
+//    &desc));
 //  }
 //  else if (elements)
 //  {
@@ -81,39 +83,42 @@ bool GpuObjects::CreateIndexBuffer(u32 ibSize, DXGI_FORMAT ibFormat, const void*
 //      e.SemanticIndex = semanticIndex[e.SemanticName]++;
 //      ofs += SizeFromFormat(e.Format);
 //    }
-//    INIT_RESOURCE(_vs, g_Graphics->LoadVertexShaderFromFile(filename, entryPoint, &_layout, elements));
+//    INIT_RESOURCE(_vs, g_Graphics->LoadVertexShaderFromFile(filename, entryPoint, &_layout,
+//    elements));
 //  }
 //  else
 //  {
-//    INIT_RESOURCE(_vs, g_Graphics->LoadVertexShaderFromFile(filename, entryPoint, nullptr, nullptr));
+//    INIT_RESOURCE(_vs, g_Graphics->LoadVertexShaderFromFile(filename, entryPoint, nullptr,
+//    nullptr));
 //  }
 //
 //  END_INIT_SEQUENCE();
 //}
 
 //------------------------------------------------------------------------------
-bool GpuObjects::LoadPixelShader(const char* filename, const char* entryPoint)
-{
-  _ps = g_Graphics->LoadPixelShaderFromFile(filename, entryPoint);
-  return _ps.IsValid();
-}
-
-//------------------------------------------------------------------------------
-bool GpuObjects::LoadGeometryShader(const char* filename, const char* entryPoint)
-{
-  _gs = g_Graphics->LoadGeometryShaderFromFile(filename, entryPoint);
-  return _gs.IsValid();
-}
+// bool GpuObjects::LoadPixelShader(const char* filename, const char* entryPoint)
+//{
+//  _ps = g_Graphics->LoadPixelShaderFromFile(filename, entryPoint);
+//  return _ps.IsValid();
+//}
+//
+////------------------------------------------------------------------------------
+// bool GpuObjects::LoadGeometryShader(const char* filename, const char* entryPoint)
+//{
+//  _gs = g_Graphics->LoadGeometryShaderFromFile(filename, entryPoint);
+//  return _gs.IsValid();
+//}
 
 //------------------------------------------------------------------------------
 bool GpuState::Create(const D3D11_DEPTH_STENCIL_DESC* dssDesc,
     const D3D11_BLEND_DESC* blendDesc,
     const D3D11_RASTERIZER_DESC* rasterizerDesc)
 {
-  _depthStencilState =
-      g_Graphics->CreateDepthStencilState(dssDesc ? *dssDesc : CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT()));
+  _depthStencilState = g_Graphics->CreateDepthStencilState(
+      dssDesc ? *dssDesc : CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT()));
 
-  _blendState = g_Graphics->CreateBlendState(blendDesc ? *blendDesc : CD3D11_BLEND_DESC(CD3D11_DEFAULT()));
+  _blendState =
+      g_Graphics->CreateBlendState(blendDesc ? *blendDesc : CD3D11_BLEND_DESC(CD3D11_DEFAULT()));
 
   _rasterizerState = g_Graphics->CreateRasterizerState(
       rasterizerDesc ? *rasterizerDesc : CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT()));
@@ -131,19 +136,21 @@ bool GpuState::Create(const D3D11_DEPTH_STENCIL_DESC* dssDesc,
   samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
   _samplers[Point] = g_Graphics->CreateSamplerState(samplerDesc);
 
-  return _depthStencilState.IsValid() && _blendState.IsValid() && _rasterizerState.IsValid() &&
-         _samplers[0].IsValid() && _samplers[1].IsValid() && _samplers[2].IsValid() && _samplers[3].IsValid();
+  return _depthStencilState.IsValid() && _blendState.IsValid() && _rasterizerState.IsValid()
+         && _samplers[0].IsValid() && _samplers[1].IsValid() && _samplers[2].IsValid()
+         && _samplers[3].IsValid();
 }
 
 //------------------------------------------------------------------------------
 bool GpuBundle::Create(const BundleOptions& options)
 {
+  return true;
+#if 0
   const BundleOptions::OptionFlags& flags = options.flags;
-  BEGIN_INIT_SEQUENCE();
-  INIT_FATAL(state.Create(
+  state.Create(
       flags.IsSet(BundleOptions::OptionFlag::DepthStencilDesc) ? &options.depthStencilDesc : nullptr,
       flags.IsSet(BundleOptions::OptionFlag::BlendDesc) ? &options.blendDesc : nullptr,
-      flags.IsSet(BundleOptions::OptionFlag::RasterizerDesc) ? &options.rasterizerDesc : nullptr));
+      flags.IsSet(BundleOptions::OptionFlag::RasterizerDesc) ? &options.rasterizerDesc : nullptr);
 
   objects._topology = options.topology;
 
@@ -194,6 +201,7 @@ bool GpuBundle::Create(const BundleOptions& options)
   }
 
   END_INIT_SEQUENCE();
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -272,19 +280,19 @@ BundleOptions& BundleOptions::Topology(D3D11_PRIMITIVE_TOPOLOGY topologyIn)
   return *this;
 }
 
-//------------------------------------------------------------------------------
-BundleOptions& BundleOptions::InputElement(const CD3D11_INPUT_ELEMENT_DESC& elem)
-{
-  inputElements.push_back(elem);
-  return *this;
-}
-
-//------------------------------------------------------------------------------
-BundleOptions& BundleOptions::InputElements(const vector<D3D11_INPUT_ELEMENT_DESC>& elems)
-{
-  inputElements = elems;
-  return *this;
-}
+////------------------------------------------------------------------------------
+// BundleOptions& BundleOptions::InputElement(const CD3D11_INPUT_ELEMENT_DESC& elem)
+//{
+//  inputElements.push_back(elem);
+//  return *this;
+//}
+//
+////------------------------------------------------------------------------------
+// BundleOptions& BundleOptions::InputElements(const vector<D3D11_INPUT_ELEMENT_DESC>& elems)
+//{
+//  inputElements = elems;
+//  return *this;
+//}
 
 //------------------------------------------------------------------------------
 BundleOptions& BundleOptions::DynamicVb(int numElements, int elementSize)

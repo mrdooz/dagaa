@@ -105,6 +105,7 @@
     <ClInclude Include="..\sys\msys_arena_allocator.hpp" />
     <ClInclude Include="..\sys\msys_containers.hpp" />
     <ClInclude Include="..\sys\msys_debug.h" />
+    <ClInclude Include="..\sys\msys_file.hpp" />
     <ClInclude Include="..\sys\msys_font.h" />
     <ClInclude Include="..\sys\msys_graphics.hpp" />
     <ClInclude Include="..\sys\msys_libc.h" />
@@ -136,6 +137,7 @@
     <ClCompile Include="..\sys\gpu_objects.cpp" />
     <ClCompile Include="..\sys\msys.cpp" />
     <ClCompile Include="..\sys\msys_arena_allocator.cpp" />
+    <ClCompile Include="..\sys\msys_file.cpp" />
     <ClCompile Include="..\sys\msys_graphics.cpp" />
     <ClCompile Include="..\sys\msys_malloc.cpp" />
     <ClCompile Include="..\sys\msys_math.cpp" />

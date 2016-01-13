@@ -93,6 +93,9 @@
     <ClInclude Include="..\sys\flags.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\sys\msys_file.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\sys\msys.cpp">
@@ -156,6 +159,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\sys\gpu_objects.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sys\msys_file.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -43,8 +43,7 @@ bool DXGraphics::CreateBufferInner(
 }
 
 //------------------------------------------------------------------------------
-ObjectHandle DXGraphics::CreateBuffer(
-    D3D11_BIND_FLAG bind, int size, bool dynamic, const void* buf, int userData)
+ObjectHandle DXGraphics::CreateBuffer(D3D11_BIND_FLAG bind, int size, bool dynamic, const void* buf)
 {
   ID3D11Buffer* buffer = 0;
   if (CreateBufferInner(bind, size, dynamic, buf, &buffer))
@@ -67,6 +66,34 @@ ObjectHandle DXGraphics::CreateBuffer(
     }
   }
   return g_EmptyHandle;
+}
+
+//------------------------------------------------------------------------------
+HRESULT DXGraphics::Map(
+  ObjectHandle h,
+  UINT sub,
+  D3D11_MAP type,
+  UINT flags,
+  D3D11_MAPPED_SUBRESOURCE *res)
+{
+  return _context->Map(GetResource<ID3D11Resource>(h), sub, type, flags, res);
+}
+
+//------------------------------------------------------------------------------
+void DXGraphics::Unmap(ObjectHandle h, UINT sub)
+{
+  return _context->Unmap(GetResource<ID3D11Resource>(h), sub);
+}
+
+//------------------------------------------------------------------------------
+void DXGraphics::CopyToBuffer(ObjectHandle h, const void* data, u32 len)
+{
+  D3D11_MAPPED_SUBRESOURCE res;
+  if (SUCCEEDED(Map(h, 0, D3D11_MAP_WRITE_DISCARD, 0, &res)))
+  {
+    memcpy(res.pData, data, len);
+    Unmap(h, 0);
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -105,7 +132,6 @@ static void InitTextureDesc(D3D11_TEXTURE2D_DESC* desc,
   desc->SampleDesc.Count = 1;
   DEFAULTS_TO_ZERO(desc->SampleDesc.Quality, 0);
   desc->Usage = usage;
-  //desc->Format = DXGI_FORMAT_R8G8B8A8_UNORM;
   desc->Format = fmt;
   desc->BindFlags = bindFlag;
 
@@ -143,7 +169,7 @@ ObjectHandle DXGraphics::CreateRenderTarget(int width, int height, u32* col)
     width,
     height,
     D3D11_USAGE_DEFAULT,
-    DXGI_FORMAT_R32G32B32A32_UINT,
+    DXGI_FORMAT_R8G8B8A8_UINT,
     D3D11_BIND_SHADER_RESOURCE);
 
   D3D11_SUBRESOURCE_DATA data;
@@ -156,7 +182,7 @@ ObjectHandle DXGraphics::CreateRenderTarget(int width, int height, u32* col)
     {
       tmp[i] = *col;
     }
-    data.pSysMem = (void*)tmp;
+    data.pSysMem = tmp;
     data.SysMemPitch = sizeof(u32) * width;
     data.SysMemSlicePitch = data.SysMemPitch * height;
   }
@@ -360,29 +386,40 @@ int DXGraphics::CreateDevice(HWND h, u32 width, u32 height)
 }
 
 //-----------------------------------------------------------------------------
-void DXGraphics::CreateDefaultStates()
+ObjectHandle DXGraphics::CreateRasterizerState(const D3D11_RASTERIZER_DESC& desc)
+{
+  ID3D11RasterizerState* rasterizerState;
+  _device->CreateRasterizerState(&desc, &rasterizerState);
+  return AddResource(ObjectHandle::RasterizeState, rasterizerState);
+}
+
+//-----------------------------------------------------------------------------
+ObjectHandle DXGraphics::CreateDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& desc)
+{
+  ID3D11DepthStencilState* depthStencilState;
+  _device->CreateDepthStencilState(&desc, &depthStencilState);
+  return AddResource(ObjectHandle::DepthStencilState, depthStencilState);
+}
+
+ObjectHandle DXGraphics::CreateBlendState(const D3D11_BLEND_DESC& desc)
+//-----------------------------------------------------------------------------
 {
   ID3D11BlendState* blendState;
-  D3D11_BLEND_DESC blendDesc = CD3D11_BLEND_DESC(CD3D11_DEFAULT());
-  g_Graphics->_device->CreateBlendState(&blendDesc, &blendState);
-  g_DefaultBlendState = AddResource(ObjectHandle::BlendState, blendState);
+  _device->CreateBlendState(&desc, &blendState);
+  return AddResource(ObjectHandle::BlendState, blendState);
+}
 
-  ID3D11RasterizerState* rasterizerState;
-  D3D11_RASTERIZER_DESC rasterizerDesc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
-  g_Graphics->_device->CreateRasterizerState(&rasterizerDesc, &rasterizerState);
-  g_DefaultRasterizerState = AddResource(ObjectHandle::RasterizeState, rasterizerState);
-
-  ID3D11DepthStencilState* depthStencilState;
-  D3D11_DEPTH_STENCIL_DESC depthStencilDesc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
-  g_Graphics->_device->CreateDepthStencilState(&depthStencilDesc, &depthStencilState);
-  g_DefaultDepthStencilState = AddResource(ObjectHandle::DepthStencilState, depthStencilState);
-
-  ID3D11DepthStencilState* depthDisabledStencilState;
+//-----------------------------------------------------------------------------
+void DXGraphics::CreateDefaultStates()
+{
+  g_DefaultBlendState = CreateBlendState(CD3D11_BLEND_DESC(CD3D11_DEFAULT()));
+  g_DefaultRasterizerState = CreateRasterizerState(CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT()));
+  g_DefaultDepthStencilState = CreateDepthStencilState(CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT()));
+  
   D3D11_DEPTH_STENCIL_DESC depthDescDepthDisabled = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
   depthDescDepthDisabled = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
   depthDescDepthDisabled.DepthEnable = FALSE;
-  g_Graphics->_device->CreateDepthStencilState(&depthDescDepthDisabled, &depthDisabledStencilState);
-  g_DepthDisabledState = AddResource(ObjectHandle::DepthStencilState, depthDisabledStencilState);
+  g_DepthDisabledState = CreateDepthStencilState(depthDescDepthDisabled);
 
   CD3D11_SAMPLER_DESC samplerDesc = CD3D11_SAMPLER_DESC(CD3D11_DEFAULT());
   _samplers[Linear] = CreateSamplerState(samplerDesc);
