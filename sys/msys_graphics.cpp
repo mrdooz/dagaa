@@ -162,15 +162,15 @@ ObjectHandle DXGraphics::AddResource(ObjectHandle::Type type, void* resource)
 }
 
 //-----------------------------------------------------------------------------
-ObjectHandle DXGraphics::CreateRenderTarget(int width, int height, u32* col)
+ObjectHandle DXGraphics::CreateRenderTarget(int width, int height, u32* col, ObjectHandle* outSrv)
 {
   D3D11_TEXTURE2D_DESC desc;
-  InitTextureDesc(&desc,
-    width,
-    height,
-    D3D11_USAGE_DEFAULT,
-    DXGI_FORMAT_R8G8B8A8_UINT,
-    D3D11_BIND_SHADER_RESOURCE);
+
+  D3D11_BIND_FLAG bindFlags = D3D11_BIND_RENDER_TARGET;
+  if (outSrv)
+    bindFlags = (D3D11_BIND_FLAG)(bindFlags | D3D11_BIND_SHADER_RESOURCE);
+
+  InitTextureDesc(&desc, width, height, D3D11_USAGE_DEFAULT, DXGI_FORMAT_R8G8B8A8_UINT, bindFlags);
 
   D3D11_SUBRESOURCE_DATA data;
   u32* tmp = nullptr;
@@ -195,15 +195,26 @@ ObjectHandle DXGraphics::CreateRenderTarget(int width, int height, u32* col)
 
   ObjectHandle hTexture = AddResource(ObjectHandle::RenderTarget, t);
 
-  // create SRV
-  D3D_SRV_DIMENSION dim = D3D11_SRV_DIMENSION_TEXTURE2D;
-  CD3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = CD3D11_SHADER_RESOURCE_VIEW_DESC(dim, desc.Format);
-  ID3D11ShaderResourceView* srv;
-  if (FAILED(_device->CreateShaderResourceView(t, &srvDesc, &srv)))
-    return g_EmptyHandle;
+  // TODO: this is broken.. we need to create a rtv as well
+  CD3D11_RENDER_TARGET_VIEW_DESC rtDesc =
+      CD3D11_RENDER_TARGET_VIEW_DESC(D3D11_RTV_DIMENSION_TEXTURE2D, desc.Format);
+  ID3D11RenderTargetView* rtv;
+  _device->CreateRenderTargetView(t, &rtDesc, &rtv);
+  ObjectHandle hRtv = AddResource(ObjectHandle::RenderTarget, rtv);
 
-  ObjectHandle hSrv = AddResource(ObjectHandle::ShaderResourceView, srv);
-  return hSrv;
+  if (outSrv)
+  {
+    // create SRV
+    D3D_SRV_DIMENSION dim = D3D11_SRV_DIMENSION_TEXTURE2D;
+    CD3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = CD3D11_SHADER_RESOURCE_VIEW_DESC(dim, desc.Format);
+    ID3D11ShaderResourceView* srv;
+    if (FAILED(_device->CreateShaderResourceView(t, &srvDesc, &srv)))
+      return g_EmptyHandle;
+
+    *outSrv = AddResource(ObjectHandle::ShaderResourceView, srv);
+  }
+
+  return hRtv;
 }
 
 //-----------------------------------------------------------------------------
@@ -450,12 +461,9 @@ void DXGraphics::UpdateHandle(ObjectHandle handle, void* buf)
 //-----------------------------------------------------------------------------
 int DXGraphics::Init(HWND h, u32 width, u32 height)
 {
+  // TODO(magnus): meh, this is all messed up..
   int res = CreateDevice(h, width, height);
-  if (res)
-    return res;
-
   CreateDefaultStates();
-
   _context->OMSetRenderTargets(1, &_renderTargetView, _depthStencilView);
   return 1;
 }

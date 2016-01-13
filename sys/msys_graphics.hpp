@@ -12,7 +12,13 @@ struct DXGraphics
   void Clear();
   void Present();
 
-  ObjectHandle CreateRenderTarget(int width, int height, u32* col);
+  struct RenderTarget
+  {
+    ID3D11RenderTargetView* rt = nullptr;
+    ID3D11ShaderResourceView* srv = nullptr;
+  };
+
+  ObjectHandle CreateRenderTarget(int width, int height, u32* col, ObjectHandle* srv);
 
   std::pair<ObjectHandle, ObjectHandle> CreateTexture(const GenTexture* texture);
   void UpdateTexture(const GenTexture* texture, ObjectHandle h);

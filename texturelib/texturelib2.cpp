@@ -66,12 +66,19 @@ namespace TextureLib
     r.Init("texturelib/texture.dat");
     VmPrg prg = r.Read<VmPrg>();
 
-    ObjectHandle renderTargets[256];
+    struct 
+    {
+      ID3D11ShaderResourceView* srv;
+      ID3D11RenderTargetView* rt;
+    } renderTargets[256];
 
     for (int i = 0; i < prg.texturesUsed; ++i)
     {
       u32 black = 0;
-      renderTargets[i] = g_Graphics->CreateRenderTarget(1024, 1024, &black);
+      ObjectHandle hSrv;
+      ObjectHandle hRt = g_Graphics->CreateRenderTarget(1024, 1024, &black, &hSrv);
+      renderTargets[i].srv = g_Graphics->GetResource<ID3D11ShaderResourceView>(hSrv);
+      renderTargets[i].rt = g_Graphics->GetResource<ID3D11RenderTargetView>(hRt);
     }
 
     ID3D11DeviceContext* ctx = g_Graphics->_context;
@@ -95,19 +102,22 @@ namespace TextureLib
 
     ObjectHandle cb = g_Graphics->CreateBuffer(D3D11_BIND_CONSTANT_BUFFER, 1024, true, nullptr);
 
+    ID3D11ShaderResourceView* finalOutput;
+
     while (!r.Eof())
     {
       u8 opIdx = r.Read<u8>();
       u8 rtIdx = r.Read<u8>();
 
+      if ((ShaderOps)opIdx == ShaderOps::Store)
+        finalOutput = renderTargets[rtIdx].srv;
+
+      // Set all the input textures
       u8 numInputTextures = r.Read<u8>();
       for (int i = 0; i < numInputTextures; ++i)
       {
         u8 textureIdx = r.Read<u8>();
-        // Set shader resource
-        ID3D11ShaderResourceView* srv =
-          g_Graphics->GetResource<ID3D11ShaderResourceView>(renderTargets[textureIdx]);
-        ctx->PSSetShaderResources(0, 1, &srv);
+        ctx->PSSetShaderResources(i, 1, &renderTargets[textureIdx].srv);
       }
 
       u16 cbufferSize = r.Read<u16>();
@@ -116,9 +126,29 @@ namespace TextureLib
       g_Graphics->CopyToBuffer(cb, r.Buf(), cbufferSize);
       r.Skip(cbufferSize);
 
+      // Set render target and draw
+      if ((ShaderOps)opIdx == ShaderOps::Store)
+      {
+        ctx->OMSetRenderTargets(1, &g_Graphics->_renderTargetView, nullptr);
+      }
+      else
+      {
+        ctx->OMSetRenderTargets(1, &renderTargets[rtIdx].rt, nullptr);
+      }
+
       ctx->Draw(6, 0);
 
+      for (int i = 0; i < numInputTextures; ++i)
+      {
+        ctx->PSSetShaderResources(i, 0, nullptr);
+      }
+
     }
+
+    //ID3D11ShaderResourceView* srv = renderTargets[finalOutput].srv;
+    //ctx->PSSetShaderResources(0, 1, &finalOutput);
+    //ctx->Draw(6, 0);
+
     return true;
   }
  }

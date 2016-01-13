@@ -66,6 +66,7 @@ void intro_end(void)
 int intro_run(ObjectHandle texture)
 {
   float time = (1.0f / 1000.0f) * (float)(msys_timerGet() - intro.mTo);
+  return 0;
 
   ID3D11DeviceContext* ctx = g_Graphics->_context;
   ctx->IASetInputLayout(nullptr);
