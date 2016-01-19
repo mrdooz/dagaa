@@ -521,6 +521,8 @@ void DXGraphics::UpdateHandle(ObjectHandle handle, void* buf)
 //-----------------------------------------------------------------------------
 int DXGraphics::Init(HWND h, u32 width, u32 height)
 {
+  _backBufferWidth = width;
+  _backBufferHeight = height;
   // TODO(magnus): meh, this is all messed up..
   int res = CreateDevice(h, width, height);
   CreateDefaultStates();

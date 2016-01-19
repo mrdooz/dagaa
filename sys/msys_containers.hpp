@@ -48,6 +48,17 @@ struct FixedLinearMap
     return nullptr;
   }
 
+  const V* find(const K& key) const
+  {
+    for (int i = 0; i < data.size(); ++i)
+    {
+      if (data[i].first == key)
+        return &data[i].second;
+    }
+
+    return nullptr;
+  }
+
   FixedArray<pair<K, V>, N> data;
 };
 

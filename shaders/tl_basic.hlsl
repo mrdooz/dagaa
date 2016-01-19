@@ -1,6 +1,6 @@
 #include "tl_common.hlsl"
 
-cbuffer cbFill : register(c0)
+cbuffer cbFill : register(c1)
 {
   float4 col;
 };

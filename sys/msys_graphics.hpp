@@ -75,6 +75,8 @@ struct DXGraphics
 
   CD3D11_VIEWPORT _viewport;
 
+  int _backBufferWidth, _backBufferHeight;
+
   struct Resource
   {
     enum Flags {

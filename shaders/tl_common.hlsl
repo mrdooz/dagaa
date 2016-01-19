@@ -9,6 +9,12 @@ sampler LinearWrap : register(s2);
 sampler LinearBorder : register(s3);
 
 //------------------------------------------------------
+cbuffer cbCommon : register(c0)
+{
+  float2 dim;
+};
+
+//------------------------------------------------------
 struct VSQuadOut
 {
   float4 pos : SV_Position;

@@ -1,16 +1,21 @@
-#include "texturelib.hpp"
-#include "../sys/msys_graphics.hpp"
 #include "../sys/msys_containers.hpp"
-#include <shaders/out/tl_common_VsQuad.vso.hpp>
+#include "../sys/msys_graphics.hpp"
+#include <sys/msys_math.hpp>
+#include "texturelib.hpp"
+#include <shaders/out/tl_arith_PsModulate.pso.hpp>
 #include <shaders/out/tl_basic_PsCopy.pso.hpp>
 #include <shaders/out/tl_basic_PsFill.pso.hpp>
-#include <shaders/out/tl_arith_PsModulate.pso.hpp>
+#include <shaders/out/tl_gradient_PsLinearGradient.pso.hpp>
+#include <shaders/out/tl_gradient_PsRadialGradient.pso.hpp>
+#include <shaders/out/tl_common_VsQuad.vso.hpp>
 
 #include <sys/msys_file.hpp>
-#include <sys/msys_utils.hpp>
 #include <sys/msys_libc.h>
+#include <sys/msys_utils.hpp>
 
 #include <vector>
+
+#define LOAD_FROM_FILE 0
 
 namespace TextureLib
 {
@@ -21,85 +26,121 @@ namespace TextureLib
     Copy = 1,
 
     Fill = 16,
+    RadialGradient = 17,
+    LinearGradient = 18,
 
     Modulate = 64,
   };
 
- static FixedLinearMap<u8, ID3D11PixelShader*, 256> g_Shaders;
- ObjectHandle g_vsFullScreen;
+  static FixedLinearMap<u8, ID3D11PixelShader*, 256> g_Shaders;
+  static ObjectHandle g_vsFullScreen;
+  static ObjectHandle g_cbCommon;
 
- struct
- {
-   ObjectHandle hTexture;
-   ObjectHandle hSrv;
-   ObjectHandle hRt;
-   ID3D11ShaderResourceView* srv;
-   ID3D11RenderTargetView* rt;
- } renderTargets[256];
+  static struct
+  {
+    vec2 dim;
+  } cbCommon;
 
-static  const int NUM_AUX_TEXTURES = 16;
+  struct
+  {
+    ObjectHandle hTexture;
+    ObjectHandle hSrv;
+    ObjectHandle hRt;
+    ID3D11ShaderResourceView* srv;
+    ID3D11RenderTargetView* rt;
+  } renderTargets[256];
+
+  static const int NUM_AUX_TEXTURES = 16;
 
 #if WITH_TEXTURE_UPDATE
 
- static HANDLE g_eventNewData = INVALID_HANDLE_VALUE;
- static HANDLE g_eventClose = INVALID_HANDLE_VALUE;
- static HANDLE g_updateThread = INVALID_HANDLE_VALUE;
- 
- static char g_newData[4096];
- static int g_newDataSize;
+  static HANDLE g_eventNewData = INVALID_HANDLE_VALUE;
+  static HANDLE g_eventClose = INVALID_HANDLE_VALUE;
+  static HANDLE g_updateThread = INVALID_HANDLE_VALUE;
 
- DWORD WINAPI ThreadProc(LPVOID lpParameter)
- { 
-   BOOL   fConnected = FALSE;
-   DWORD  dwThreadId = 0;
-   LPTSTR pipeName = TEXT("\\\\.\\pipe\\texturepipe");
+  static char g_newData[4096];
+  static int g_newDataSize;
 
-   const int BUF_SIZE = 4096;
-   char readBuf[BUF_SIZE];
-   //char writeBuf[BUF_SIZE];
+  DWORD WINAPI ThreadProc(LPVOID lpParameter)
+  {
+    BOOL fConnected = FALSE;
+    DWORD dwThreadId = 0;
+    LPTSTR pipeName = TEXT("\\\\.\\pipe\\texturepipe");
 
-   while (true)
-   {
-     HANDLE hPipe = CreateNamedPipe(pipeName,
-       PIPE_ACCESS_DUPLEX,
-       PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
-       PIPE_UNLIMITED_INSTANCES, // max. instances
-       BUF_SIZE,                 // output buffer size
-       BUF_SIZE,                 // input buffer size
-       0,                        // client time-out
-       NULL);                    // default security attribute
+    const int BUF_SIZE = 4096;
+    char readBuf[BUF_SIZE];
+    // char writeBuf[BUF_SIZE];
 
-     BOOL res = ConnectNamedPipe(hPipe, NULL) ? TRUE : (GetLastError() == ERROR_PIPE_CONNECTED);
-    
+    while (true)
+    {
+      HANDLE hPipe = CreateNamedPipe(pipeName,
+          PIPE_ACCESS_DUPLEX,
+          PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+          PIPE_UNLIMITED_INSTANCES, // max. instances
+          BUF_SIZE,                 // output buffer size
+          BUF_SIZE,                 // input buffer size
+          0,                        // client time-out
+          NULL);                    // default security attribute
 
-     // XXX: meh, for a proper shutdown, I need to to async reads, and WaitForMultipleObjects..
-     while (true)
-     {
-       DWORD bytesRead = 0;
-       res = ReadFile(hPipe, readBuf, BUF_SIZE, &bytesRead, NULL);
-       if (!res)
-         break;
+      BOOL res = ConnectNamedPipe(hPipe, NULL) ? TRUE : (GetLastError() == ERROR_PIPE_CONNECTED);
 
-       memcpy(g_newData, readBuf, bytesRead);
-       g_newDataSize = bytesRead;
-       SetEvent(g_eventNewData);
-     }
+      // XXX: meh, for a proper shutdown, I need to to async reads, and WaitForMultipleObjects..
+      while (true)
+      {
+        DWORD bytesRead = 0;
+        res = ReadFile(hPipe, readBuf, BUF_SIZE, &bytesRead, NULL);
+        if (!res)
+          break;
 
-     DisconnectNamedPipe(hPipe);
-     CloseHandle(hPipe);
-   }
+        memcpy(g_newData, readBuf, bytesRead);
+        g_newDataSize = bytesRead;
+        SetEvent(g_eventNewData);
+      }
 
-   return 1;
- }
+      DisconnectNamedPipe(hPipe);
+      CloseHandle(hPipe);
+    }
+
+    return 1;
+  }
 #endif
 
- //-----------------------------------------------------------------------------
+  //-----------------------------------------------------------------------------
   template <typename T>
   T Read(const char** ptr)
   {
     T tmp = *(T*)(*ptr);
     *ptr += sizeof(T);
     return tmp;
+  }
+
+  //-----------------------------------------------------------------------------
+  static void SetupState(const D3D11_VIEWPORT& viewport)
+  {
+    ID3D11DeviceContext* ctx = g_Graphics->_context;
+    ctx->IASetInputLayout(nullptr);
+    ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    ctx->VSSetShader(g_Graphics->GetResource<ID3D11VertexShader>(g_vsFullScreen), 0, 0);
+
+    //CD3D11_VIEWPORT viewport = CD3D11_VIEWPORT(0.f, 0.f, (float)TEXTURE_SIZE, (float)TEXTURE_SIZE);
+    ctx->RSSetViewports(1, &viewport);
+
+    float blendFactor[4] = { 1, 1, 1, 1 };
+    ctx->OMSetBlendState(
+      g_Graphics->GetResource<ID3D11BlendState>(g_DefaultBlendState), blendFactor, 0xffffffff);
+    ctx->RSSetState(g_Graphics->GetResource<ID3D11RasterizerState>(g_DefaultRasterizerState));
+    ctx->OMSetDepthStencilState(
+      g_Graphics->GetResource<ID3D11DepthStencilState>(g_DepthDisabledState), 0);
+
+    ID3D11SamplerState* sampler =
+      g_Graphics->GetResource<ID3D11SamplerState>(g_Graphics->_samplers[DXGraphics::Linear]);
+    ctx->PSSetSamplers(1, 1, &sampler);
+
+    cbCommon.dim.x = (float)TEXTURE_SIZE;
+    cbCommon.dim.y = (float)TEXTURE_SIZE;
+    g_Graphics->CopyToBuffer(g_cbCommon, (void*)&cbCommon, sizeof(cbCommon));
+    ID3D11Buffer* commonCb = g_Graphics->GetResource<ID3D11Buffer>(g_cbCommon);
+    ctx->PSSetConstantBuffers(0, 1, &commonCb);
   }
 
   //-----------------------------------------------------------------------------
@@ -130,23 +171,7 @@ static  const int NUM_AUX_TEXTURES = 16;
     }
 
     ID3D11DeviceContext* ctx = g_Graphics->_context;
-    ctx->IASetInputLayout(nullptr);
-    ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    ctx->VSSetShader(g_Graphics->GetResource<ID3D11VertexShader>(g_vsFullScreen), 0, 0);
-
-    CD3D11_VIEWPORT viewport = CD3D11_VIEWPORT(0.f, 0.f, (float)TEXTURE_SIZE, (float)TEXTURE_SIZE);
-    ctx->RSSetViewports(1, &viewport);
-
-    float blendFactor[4] = { 1, 1, 1, 1 };
-    ctx->OMSetBlendState(
-      g_Graphics->GetResource<ID3D11BlendState>(g_DefaultBlendState), blendFactor, 0xffffffff);
-    ctx->RSSetState(g_Graphics->GetResource<ID3D11RasterizerState>(g_DefaultRasterizerState));
-    ctx->OMSetDepthStencilState(
-      g_Graphics->GetResource<ID3D11DepthStencilState>(g_DepthDisabledState), 0);
-
-    ID3D11SamplerState* sampler =
-      g_Graphics->GetResource<ID3D11SamplerState>(g_Graphics->_samplers[DXGraphics::Linear]);
-    ctx->PSSetSamplers(1, 1, &sampler);
+    SetupState(CD3D11_VIEWPORT(0.f, 0.f, (float)TEXTURE_SIZE, (float)TEXTURE_SIZE));
 
     ObjectHandle cb = g_Graphics->CreateBuffer(D3D11_BIND_CONSTANT_BUFFER, 1024, true, nullptr);
 
@@ -169,11 +194,12 @@ static  const int NUM_AUX_TEXTURES = 16;
       g_Graphics->CopyToBuffer(cb, reader.Buf(), cbufferSize);
       reader.Skip(cbufferSize);
 
-      ID3D11Buffer* xx = g_Graphics->GetResource<ID3D11Buffer>(cb);
-      ctx->PSSetConstantBuffers(0, 1, &xx);
+      ID3D11Buffer* resCb = g_Graphics->GetResource<ID3D11Buffer>(cb);
+      ctx->PSSetConstantBuffers(1, 1, &resCb);
 
       // Set render target and draw
       ctx->OMSetRenderTargets(1, &renderTargets[rtIdx].rt, nullptr);
+      ASSERT(g_Shaders.contains(opIdx));
       ctx->PSSetShader(g_Shaders[opIdx], nullptr, 0);
       ctx->Draw(6, 0);
 
@@ -195,15 +221,17 @@ static  const int NUM_AUX_TEXTURES = 16;
       g_Graphics->ReleaseResource(renderTargets[i].hSrv);
     }
   }
-  
 
   //-----------------------------------------------------------------------------
   bool Init()
   {
     g_vsFullScreen = g_Graphics->CreateShader(FW_STR("shaders/out/tl_common_VsQuadD.vso"),
-      tl_common_VsQuad_bin,
-      sizeof(tl_common_VsQuad_bin),
-      ObjectHandle::VertexShader);
+        tl_common_VsQuad_bin,
+        sizeof(tl_common_VsQuad_bin),
+        ObjectHandle::VertexShader);
+
+    g_cbCommon =
+        g_Graphics->CreateBuffer(D3D11_BIND_CONSTANT_BUFFER, sizeof(cbCommon), true, nullptr);
 
 #define LOAD_PS(cmd, filename, bin)                                                                \
   {                                                                                                \
@@ -214,6 +242,12 @@ static  const int NUM_AUX_TEXTURES = 16;
 
     LOAD_PS(ShaderOps::Copy, "tl_basic_PsCopyD", tl_basic_PsCopy_bin);
     LOAD_PS(ShaderOps::Fill, "tl_basic_PsFillD", tl_basic_PsFill_bin);
+    LOAD_PS(ShaderOps::RadialGradient,
+        "tl_gradient_PsRadialGradientD",
+        tl_gradient_PsRadialGradient_bin);
+    LOAD_PS(ShaderOps::LinearGradient,
+        "tl_gradient_PsLinearGradientD",
+        tl_gradient_PsLinearGradient_bin);
     LOAD_PS(ShaderOps::Modulate, "tl_arith_PsModulateD", tl_arith_PsModulate_bin);
 
     memset(renderTargets, 0, sizeof(renderTargets));
@@ -238,6 +272,15 @@ static  const int NUM_AUX_TEXTURES = 16;
     DWORD threadId;
     g_updateThread = CreateThread(NULL, 0, ThreadProc, NULL, 0, &threadId);
 
+#if LOAD_FROM_FILE
+    std::vector<char> buf;
+    if (LoadFile("c:/users/magnus/documents/test1.dat", &buf))
+    {
+      BinaryReader r(buf.data(), (int)buf.size());
+      GenerateTexture(r);
+    }
+#endif
+
     return true;
   }
 
@@ -245,6 +288,8 @@ static  const int NUM_AUX_TEXTURES = 16;
   void Tick()
   {
 #if WITH_TEXTURE_UPDATE
+
+#if !LOAD_FROM_FILE
     if (WaitForSingleObject(g_eventNewData, 0) == WAIT_OBJECT_0)
     {
       BinaryReader r(g_newData, g_newDataSize);
@@ -252,30 +297,15 @@ static  const int NUM_AUX_TEXTURES = 16;
     }
 #endif
 
+#endif
+
     ID3D11DeviceContext* ctx = g_Graphics->_context;
-    ctx->IASetInputLayout(nullptr);
-    ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    ctx->VSSetShader(g_Graphics->GetResource<ID3D11VertexShader>(g_vsFullScreen), 0, 0);
-
-    CD3D11_VIEWPORT viewport = CD3D11_VIEWPORT(0.f, 0.f, (float)TEXTURE_SIZE, (float)TEXTURE_SIZE);
-    ctx->RSSetViewports(1, &viewport);
-
-    float blendFactor[4] = { 1, 1, 1, 1 };
-    ctx->OMSetBlendState(
-      g_Graphics->GetResource<ID3D11BlendState>(g_DefaultBlendState), blendFactor, 0xffffffff);
-    ctx->RSSetState(g_Graphics->GetResource<ID3D11RasterizerState>(g_DefaultRasterizerState));
-    ctx->OMSetDepthStencilState(
-      g_Graphics->GetResource<ID3D11DepthStencilState>(g_DepthDisabledState), 0);
-
-    ID3D11SamplerState* sampler =
-      g_Graphics->GetResource<ID3D11SamplerState>(g_Graphics->_samplers[DXGraphics::Linear]);
-    ctx->PSSetSamplers(1, 1, &sampler);
-
+    SetupState(CD3D11_VIEWPORT(
+        0.f, 0.f, (float)g_Graphics->_backBufferWidth, (float)g_Graphics->_backBufferHeight));
     ctx->PSSetShaderResources(0, 1, &renderTargets[0xff].srv);
     ctx->OMSetRenderTargets(1, &g_Graphics->_renderTargetView, nullptr);
     ctx->PSSetShader(g_Shaders[(u8)ShaderOps::Copy], nullptr, 0);
     ctx->Draw(6, 0);
-
   }
 
   //-----------------------------------------------------------------------------
@@ -285,5 +315,4 @@ static  const int NUM_AUX_TEXTURES = 16;
     CloseHandle(g_eventNewData);
 #endif
   }
-
- }
+}
