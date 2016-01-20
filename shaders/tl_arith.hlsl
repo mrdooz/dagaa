@@ -1,6 +1,6 @@
 #include "tl_common.hlsl"
 
-cbuffer cbModulate : register(c1)
+cbuffer cbModulate : register(b1)
 {
   float2 factor;
 };

@@ -115,6 +115,10 @@ void DXGraphics::CopyToBuffer(ObjectHandle h, const void* data, u32 len)
     memcpy(res.pData, data, len);
     Unmap(h, 0);
   }
+  else
+  {
+    ASSERT(!"Unable to map buffer!");
+  }
 }
 
 //-----------------------------------------------------------------------------

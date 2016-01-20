@@ -9,7 +9,7 @@ sampler LinearWrap : register(s2);
 sampler LinearBorder : register(s3);
 
 //------------------------------------------------------
-cbuffer cbCommon : register(c0)
+cbuffer cbCommon : register(b0)
 {
   float2 dim;
 };

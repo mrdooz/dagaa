@@ -1,13 +1,13 @@
 #include "tl_common.hlsl"
 
-cbuffer cbLinearGradient : register(c1)
+cbuffer cbLinearGradient : register(b1)
 {
   float2 pos0;
   float2 pos1;
   float linPower;
 };
 
-cbuffer cbRadialGradient : register(c1)
+cbuffer cbRadialGradient : register(b1)
 {
   float2 center;
   float radPower;

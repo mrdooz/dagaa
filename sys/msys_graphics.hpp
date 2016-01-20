@@ -3,6 +3,14 @@
 
 struct GpuState;
 //-----------------------------------------------------------------------------
+struct RenderTarget
+{
+  ObjectHandle texture;
+  ObjectHandle srv;
+  ObjectHandle rt;
+};
+
+//-----------------------------------------------------------------------------
 struct DXGraphics
 {
   DXGraphics();

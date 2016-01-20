@@ -1,6 +1,6 @@
 #include "tl_common.hlsl"
 
-cbuffer cbFill : register(c1)
+cbuffer cbFill : register(b1)
 {
   float4 col;
 };
@@ -9,7 +9,6 @@ cbuffer cbFill : register(c1)
 // entry-point: ps
 float4 PsFill(VSQuadOut p) : SV_Target
 {
-  // return float4(1,1,0,0);
   return col;
 }
 

@@ -2,12 +2,13 @@
 #include "../sys/msys_graphics.hpp"
 #include <sys/msys_math.hpp>
 #include "texturelib.hpp"
+#include <shaders/out/tl_common_VsQuad.vso.hpp>
 #include <shaders/out/tl_arith_PsModulate.pso.hpp>
 #include <shaders/out/tl_basic_PsCopy.pso.hpp>
 #include <shaders/out/tl_basic_PsFill.pso.hpp>
+#include <shaders/out/tl_noise_PsNoise.pso.hpp>
 #include <shaders/out/tl_gradient_PsLinearGradient.pso.hpp>
 #include <shaders/out/tl_gradient_PsRadialGradient.pso.hpp>
-#include <shaders/out/tl_common_VsQuad.vso.hpp>
 
 #include <sys/msys_file.hpp>
 #include <sys/msys_libc.h>
@@ -15,7 +16,7 @@
 
 #include <vector>
 
-#define LOAD_FROM_FILE 0
+#define LOAD_FROM_FILE 1
 
 namespace TextureLib
 {
@@ -28,6 +29,7 @@ namespace TextureLib
     Fill = 16,
     RadialGradient = 17,
     LinearGradient = 18,
+    Noise = 20,
 
     Modulate = 64,
   };
@@ -122,7 +124,6 @@ namespace TextureLib
     ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     ctx->VSSetShader(g_Graphics->GetResource<ID3D11VertexShader>(g_vsFullScreen), 0, 0);
 
-    //CD3D11_VIEWPORT viewport = CD3D11_VIEWPORT(0.f, 0.f, (float)TEXTURE_SIZE, (float)TEXTURE_SIZE);
     ctx->RSSetViewports(1, &viewport);
 
     float blendFactor[4] = { 1, 1, 1, 1 };
@@ -139,8 +140,8 @@ namespace TextureLib
     cbCommon.dim.x = (float)TEXTURE_SIZE;
     cbCommon.dim.y = (float)TEXTURE_SIZE;
     g_Graphics->CopyToBuffer(g_cbCommon, (void*)&cbCommon, sizeof(cbCommon));
-    ID3D11Buffer* commonCb = g_Graphics->GetResource<ID3D11Buffer>(g_cbCommon);
-    ctx->PSSetConstantBuffers(0, 1, &commonCb);
+    ID3D11Buffer* cbCommonPtr = g_Graphics->GetResource<ID3D11Buffer>(g_cbCommon);
+    ctx->PSSetConstantBuffers(0, 1, &cbCommonPtr);
   }
 
   //-----------------------------------------------------------------------------
@@ -174,6 +175,7 @@ namespace TextureLib
     SetupState(CD3D11_VIEWPORT(0.f, 0.f, (float)TEXTURE_SIZE, (float)TEXTURE_SIZE));
 
     ObjectHandle cb = g_Graphics->CreateBuffer(D3D11_BIND_CONSTANT_BUFFER, 1024, true, nullptr);
+    ID3D11Buffer* resCb = g_Graphics->GetResource<ID3D11Buffer>(cb);
 
     while (!reader.Eof())
     {
@@ -189,13 +191,14 @@ namespace TextureLib
       }
 
       u16 cbufferSize = reader.Read<u16>();
-
-      // Copy data to the cbuffer
-      g_Graphics->CopyToBuffer(cb, reader.Buf(), cbufferSize);
-      reader.Skip(cbufferSize);
-
-      ID3D11Buffer* resCb = g_Graphics->GetResource<ID3D11Buffer>(cb);
-      ctx->PSSetConstantBuffers(1, 1, &resCb);
+      if (cbufferSize)
+      {
+        // Copy data to the cbuffer
+        g_Graphics->CopyToBuffer(cb, reader.Buf(), cbufferSize);
+        reader.Skip(cbufferSize);
+        ID3D11Buffer* cbPtr = g_Graphics->GetResource<ID3D11Buffer>(cb);
+        ctx->PSSetConstantBuffers(1, 1, &cbPtr);
+      }
 
       // Set render target and draw
       ctx->OMSetRenderTargets(1, &renderTargets[rtIdx].rt, nullptr);
@@ -232,6 +235,7 @@ namespace TextureLib
 
     g_cbCommon =
         g_Graphics->CreateBuffer(D3D11_BIND_CONSTANT_BUFFER, sizeof(cbCommon), true, nullptr);
+    ID3D11Buffer* commonCb = g_Graphics->GetResource<ID3D11Buffer>(g_cbCommon);
 
 #define LOAD_PS(cmd, filename, bin)                                                                \
   {                                                                                                \
@@ -248,6 +252,9 @@ namespace TextureLib
     LOAD_PS(ShaderOps::LinearGradient,
         "tl_gradient_PsLinearGradientD",
         tl_gradient_PsLinearGradient_bin);
+    LOAD_PS(ShaderOps::Noise,
+        "tl_noise_PsNoiseD",
+        tl_noise_PsNoise_bin);
     LOAD_PS(ShaderOps::Modulate, "tl_arith_PsModulateD", tl_arith_PsModulate_bin);
 
     memset(renderTargets, 0, sizeof(renderTargets));
