@@ -39,4 +39,39 @@ bool LoadFile(const char* filename, vector<char> *buf)
   return true;
 }
 
+//------------------------------------------------------------------------------
+LineReader::LineReader(const char* filename)
+{
+  LoadFile(filename, &buf);
+}
+
+//------------------------------------------------------------------------------
+bool LineReader::Eof() const
+{
+  return idx == buf.size();
+}
+
+//------------------------------------------------------------------------------
+string LineReader::Next()
+{
+  if (Eof())
+    return string();
+
+  // find next newline or eof from the current position
+  const char* next = strchr(&buf[idx], '\r');
+  const char* cur = &buf[idx];
+  size_t len;
+  if (next)
+  {
+    len = next - cur;
+    idx += len + 2;
+  }
+  else
+  {
+    len = buf.size() - idx;
+    idx = buf.size();
+  }
+  return string(cur, len);
+}
+
 #endif

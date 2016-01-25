@@ -14,7 +14,7 @@ cbuffer cbRadialGradient : register(b1)
 };
 
 //------------------------------------------------------
-// entry-point: ps
+// full-screen-entry-point: ps
 float4 PsLinearGradient(VSQuadOut p) : SV_Target
 {
   float2 xy = -0.5 + p.pos.xy / dim;
