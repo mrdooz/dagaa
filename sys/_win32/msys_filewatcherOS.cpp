@@ -3,6 +3,8 @@
 #include "msys_filewatcherOS.hpp"
 #include <sys/msys_file.hpp>
 
+using namespace std;
+
 FileWatcherWin32* g_FileWatcher;
 
 // FILE_NOTIFY_CHANGE_FILE_NAME is needed because photoshop doesn't modify the file directly,

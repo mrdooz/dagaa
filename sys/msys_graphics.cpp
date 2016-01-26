@@ -226,7 +226,7 @@ void DXGraphics::ReleaseResource(ObjectHandle h)
     RELEASE_RESOURCE(DepthStencilState, ID3D11DepthStencilState);
 
     RELEASE_RESOURCE(Texture, ID3D11Texture2D);
-    RELEASE_RESOURCE(RenderTarget, ID3D11RenderTargetView);
+    RELEASE_RESOURCE(RenderTargetView, ID3D11RenderTargetView);
     RELEASE_RESOURCE(ShaderResourceView, ID3D11ShaderResourceView);
 
     RELEASE_RESOURCE(Sampler, ID3D11SamplerState);
@@ -284,7 +284,7 @@ bool DXGraphics::CreateRenderTarget(int width,
       CD3D11_RENDER_TARGET_VIEW_DESC(D3D11_RTV_DIMENSION_TEXTURE2D, desc.Format);
   ID3D11RenderTargetView* rtv;
   _device->CreateRenderTargetView(t, &rtDesc, &rtv);
-  *outRt = AddResource(ObjectHandle::RenderTarget, rtv);
+  *outRt = AddResource(ObjectHandle::RenderTargetView, rtv);
 
   // create SRV
   D3D11_SRV_DIMENSION dim = D3D11_SRV_DIMENSION_TEXTURE2D;
@@ -301,8 +301,11 @@ bool DXGraphics::CreateRenderTarget(int width,
 }
 
 //-----------------------------------------------------------------------------
-ObjectHandle DXGraphics::CreateShader(
-    const char* filename, const void* buf, int len, ObjectHandle::Type type)
+ObjectHandle DXGraphics::CreateShader(const char* filename,
+    const void* buf,
+    int len,
+    ObjectHandle::Type type,
+    const FileWatcherWin32::cbFileChanged& cbChained)
 {
 #if WITH_FILE_WATCHER
   ObjectHandle h = ReserveHandle(type);
@@ -318,6 +321,8 @@ ObjectHandle DXGraphics::CreateShader(
           if (SUCCEEDED(_device->CreateVertexShader(buf, len, nullptr, &vs)))
           {
             UpdateHandle(h, vs);
+            if (cbChained)
+              cbChained(filename, buf, len);
             return true;
           }
           return false;
@@ -340,6 +345,8 @@ ObjectHandle DXGraphics::CreateShader(
           if (SUCCEEDED(_device->CreatePixelShader(buf, len, nullptr, &ps)))
           {
             UpdateHandle(h, ps);
+            if (cbChained)
+              cbChained(filename, buf, len);
             return true;
           }
           return false;
@@ -376,23 +383,22 @@ int DXGraphics::CreateDevice(HWND h, u32 width, u32 height)
     &_context));
 
   // Create swap chain
-  DXGI_SWAP_CHAIN_DESC swapChainDesc;
-  msys_memset(&swapChainDesc, 0, sizeof(swapChainDesc));
+  msys_memset(&_swapChainDesc, 0, sizeof(_swapChainDesc));
 
-  swapChainDesc.BufferDesc.Width = width;
-  swapChainDesc.BufferDesc.Height = height;
-  swapChainDesc.BufferDesc.RefreshRate.Numerator = 60;
-  swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
-  swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+  _swapChainDesc.BufferDesc.Width = width;
+  _swapChainDesc.BufferDesc.Height = height;
+  _swapChainDesc.BufferDesc.RefreshRate.Numerator = 60;
+  _swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
+  _swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 
-  swapChainDesc.SampleDesc.Count = 1;
-  DEFAULTS_TO_ZERO(swapChainDesc.SampleDesc.Quality, 0);
+  _swapChainDesc.SampleDesc.Count = 1;
+  DEFAULTS_TO_ZERO(_swapChainDesc.SampleDesc.Quality, 0);
 
-  swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-  swapChainDesc.BufferCount = 1;
-  swapChainDesc.OutputWindow = h;
+  _swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+  _swapChainDesc.BufferCount = 1;
+  _swapChainDesc.OutputWindow = h;
   // TODO(magnus): pass in info
-  swapChainDesc.Windowed = true;
+  _swapChainDesc.Windowed = true;
 
   // Get the IDXGIFactory that created the device, and use that to create the swap chain
   IDXGIDevice* dxgiDevice;
@@ -405,11 +411,12 @@ int DXGraphics::CreateDevice(HWND h, u32 width, u32 height)
   HR(dxgiAdapter->GetParent(__uuidof(IDXGIFactory), (void**)&dxgiFactory));
 
   // Now, create the swap chain.
-  HR(dxgiFactory->CreateSwapChain(_device, &swapChainDesc, &_swapChain));
+  HR(dxgiFactory->CreateSwapChain(_device, &_swapChainDesc, &_swapChain));
 
   // Create render target view for backbuffer
   _swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&_backBuffer);
   _device->CreateRenderTargetView(_backBuffer, 0, &_renderTargetView);
+  AddResource(ObjectHandle::RenderTargetView, _renderTargetView);
   _backBuffer->Release();
 
   dxgiDevice->Release();
@@ -427,6 +434,7 @@ int DXGraphics::CreateDevice(HWND h, u32 width, u32 height)
 
   HR(_device->CreateTexture2D(&depthStencilDesc, 0, &_depthStencilBuffer));
   HR(_device->CreateDepthStencilView(_depthStencilBuffer, 0, &_depthStencilView));
+  AddResource(ObjectHandle::DepthStencilView, _depthStencilView);
 
   _viewport = CD3D11_VIEWPORT(0.f, 0.f, (float)width, (float)height);
 
@@ -560,4 +568,36 @@ ObjectHandle DXGraphics::CreateSamplerState(const D3D11_SAMPLER_DESC& desc)
     return g_EmptyHandle;
 
   return AddResource(ObjectHandle::Sampler, ss);
+}
+
+//------------------------------------------------------------------------------
+void DXGraphics::SetRenderTarget(
+  ObjectHandle renderTarget, ObjectHandle depthStencil, const color* clearTarget)
+{
+}
+
+//------------------------------------------------------------------------------
+void DXGraphics::SetShaderResource(ObjectHandle h, ShaderType type, u32 slot)
+{
+  ID3D11ShaderResourceView* views[] = { GetResource<ID3D11ShaderResourceView>(h) };
+  
+  switch (type)
+  {
+    case ShaderType::VertexShader: _context->VSSetShaderResources(slot, 1, views); break;
+    case ShaderType::PixelShader: _context->PSSetShaderResources(slot, 1, views); break;
+    case ShaderType::ComputeShader: _context->CSSetShaderResources(slot, 1, views); break;
+    case ShaderType::GeometryShader: _context->GSSetShaderResources(slot, 1, views); break;
+  }
+}
+
+//------------------------------------------------------------------------------
+void DXGraphics::SetViewport(const D3D11_VIEWPORT& viewPort)
+{
+  _context->RSSetViewports(1, &viewPort);
+}
+
+//------------------------------------------------------------------------------
+void DXGraphics::SetScissorRect(const D3D11_RECT& r)
+{
+  _context->RSSetScissorRects(1, &r);
 }

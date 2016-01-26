@@ -126,6 +126,7 @@
     <ClInclude Include="..\sys\msys_types.h" />
     <ClInclude Include="..\sys\msys_utils.hpp" />
     <ClInclude Include="..\sys\object_handle.hpp" />
+    <ClInclude Include="..\sys\shader_manifest_loader.hpp" />
     <ClInclude Include="..\sys\_win32\msys_filewatcherOS.hpp" />
     <ClInclude Include="..\texturelib\texturelib.hpp" />
   </ItemGroup>
@@ -144,6 +145,8 @@
     </ClCompile>
     <ClCompile Include="..\sys\free_list.cpp" />
     <ClCompile Include="..\sys\gpu_objects.cpp" />
+    <ClCompile Include="..\sys\imgui_helpers.cpp" />
+    <ClCompile Include="..\sys\imgui_wrapper.cpp" />
     <ClCompile Include="..\sys\msys.cpp" />
     <ClCompile Include="..\sys\msys_arena_allocator.cpp" />
     <ClCompile Include="..\sys\msys_file.cpp" />
@@ -152,6 +155,7 @@
     <ClCompile Include="..\sys\msys_math.cpp" />
     <ClCompile Include="..\sys\msys_random.cpp" />
     <ClCompile Include="..\sys\msys_utils.cpp" />
+    <ClCompile Include="..\sys\shader_manifest_loader.cpp" />
     <ClCompile Include="..\sys\_win32\msys_debugOS.cpp" />
     <ClCompile Include="..\sys\_win32\msys_filewatcherOS.cpp" />
     <ClCompile Include="..\sys\_win32\msys_fontOS.cpp" />

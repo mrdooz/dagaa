@@ -6,13 +6,12 @@
 #include <vector>
 #include <unordered_map>
 
-using namespace std;
 struct FileWatcherWin32
 {
   ~FileWatcherWin32();
 
   typedef int WatchId;
-  typedef function<bool(const char* filename, const char* buf, int len)> cbFileChanged;
+  typedef std::function<bool(const char* filename, const char* buf, int len)> cbFileChanged;
 
   struct AddFileWatchResult
   {
@@ -21,7 +20,7 @@ struct FileWatcherWin32
   };
 
   AddFileWatchResult AddFileWatch(
-      const string& filename, bool initialCallback, const cbFileChanged& cb);
+      const std::string& filename, bool initialCallback, const cbFileChanged& cb);
   void RemoveFileWatch(WatchId id);
 
   void Tick();
@@ -29,8 +28,8 @@ struct FileWatcherWin32
 private:
   struct CallbackContext
   {
-    string fullPath;
-    string filename;
+    std::string fullPath;
+    std::string filename;
     cbFileChanged cb;
     WatchId id;
   };
@@ -39,11 +38,11 @@ private:
   {
     HANDLE dirHandle;
     OVERLAPPED overlapped;
-    vector<CallbackContext*> callbacks;
+    std::vector<CallbackContext*> callbacks;
   };
 
-  unordered_map<string, WatchedDir*> _watchesByDir;
-  unordered_map<const CallbackContext*, u32> _lastUpdate;
+  std::unordered_map<std::string, WatchedDir*> _watchesByDir;
+  std::unordered_map<const CallbackContext*, u32> _lastUpdate;
 
   WatchId _nextId = 0;
 

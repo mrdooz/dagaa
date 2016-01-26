@@ -18,7 +18,8 @@ struct ObjectHandle
     DepthStencilState,
     
     Texture,
-    RenderTarget,
+    RenderTargetView,
+    DepthStencilView,
     ShaderResourceView,
 
     Sampler,    

@@ -1,18 +1,19 @@
-#include "../sys/msys_containers.hpp"
-#include "../sys/msys_graphics.hpp"
-#include <sys/msys_math.hpp>
 #include "texturelib.hpp"
 #include <shaders/out/tl_common_VsQuad.vso.hpp>
 #include <shaders/out/tl_arith_PsModulate.pso.hpp>
 #include <shaders/out/tl_basic_PsCopy.pso.hpp>
 #include <shaders/out/tl_basic_PsFill.pso.hpp>
 #include <shaders/out/tl_noise_PsNoise.pso.hpp>
+#include <shaders/out/tl_noise_PsBrick.pso.hpp>
 #include <shaders/out/tl_gradient_PsLinearGradient.pso.hpp>
 #include <shaders/out/tl_gradient_PsRadialGradient.pso.hpp>
 
 #include <sys/msys_file.hpp>
 #include <sys/msys_libc.h>
 #include <sys/msys_utils.hpp>
+#include <sys/msys_containers.hpp>
+#include <sys/msys_graphics.hpp>
+#include <sys/msys_math.hpp>
 
 #include <vector>
 
@@ -21,6 +22,7 @@
 namespace TextureLib
 {
   static const int TEXTURE_SIZE = 1024;
+  static bool g_Initialized = false;
 
   enum class ShaderOps
   {
@@ -30,11 +32,12 @@ namespace TextureLib
     RadialGradient = 17,
     LinearGradient = 18,
     Noise = 20,
+    Brick = 21,
 
     Modulate = 64,
   };
 
-  static FixedLinearMap<u8, ID3D11PixelShader*, 256> g_Shaders;
+  static FixedLinearMap<u8, ObjectHandle, 256> g_Shaders;
   static ObjectHandle g_vsFullScreen;
   static ObjectHandle g_cbCommon;
 
@@ -55,7 +58,6 @@ namespace TextureLib
   static const int NUM_AUX_TEXTURES = 16;
 
 #if WITH_TEXTURE_UPDATE
-
   static HANDLE g_eventNewData = INVALID_HANDLE_VALUE;
   static HANDLE g_eventClose = INVALID_HANDLE_VALUE;
   static HANDLE g_updateThread = INVALID_HANDLE_VALUE;
@@ -106,15 +108,6 @@ namespace TextureLib
     return 1;
   }
 #endif
-
-  //-----------------------------------------------------------------------------
-  template <typename T>
-  T Read(const char** ptr)
-  {
-    T tmp = *(T*)(*ptr);
-    *ptr += sizeof(T);
-    return tmp;
-  }
 
   //-----------------------------------------------------------------------------
   static void SetupState(const D3D11_VIEWPORT& viewport)
@@ -203,7 +196,7 @@ namespace TextureLib
       // Set render target and draw
       ctx->OMSetRenderTargets(1, &renderTargets[rtIdx].rt, nullptr);
       ASSERT(g_Shaders.contains(opIdx));
-      ctx->PSSetShader(g_Shaders[opIdx], nullptr, 0);
+      ctx->PSSetShader(g_Graphics->GetResource<ID3D11PixelShader>(g_Shaders[opIdx]), nullptr, 0);
       ctx->Draw(6, 0);
 
       // unset views
@@ -225,6 +218,20 @@ namespace TextureLib
     }
   }
 
+  static bool OnShaderChanged(const char* filename, const char* buf, int len)
+  {
+    if (!g_Initialized)
+      return true;
+
+    std::vector<char> texBuf;
+    if (LoadFile("c:/users/magnus/documents/test1.dat", &texBuf))
+    {
+      BinaryReader r(texBuf.data(), (int)texBuf.size());
+      GenerateTexture(r);
+    }
+    return true;
+  }
+
   //-----------------------------------------------------------------------------
   bool Init()
   {
@@ -238,11 +245,11 @@ namespace TextureLib
     ID3D11Buffer* commonCb = g_Graphics->GetResource<ID3D11Buffer>(g_cbCommon);
 
 #define LOAD_PS(cmd, filename, bin)                                                                \
-  {                                                                                                \
-    ObjectHandle h = g_Graphics->CreateShader(                                                     \
-        FW_STR("shaders/out/" filename ".pso"), bin, sizeof(bin), ObjectHandle::PixelShader);      \
-    g_Shaders[(u8)cmd] = g_Graphics->GetResource<ID3D11PixelShader>(h);                            \
-  }
+  g_Shaders[(u8)cmd] = g_Graphics->CreateShader(FW_STR("shaders/out/" filename ".pso"),            \
+      bin,                                                                                         \
+      sizeof(bin),                                                                                 \
+      ObjectHandle::PixelShader,                                                                   \
+      OnShaderChanged);
 
     LOAD_PS(ShaderOps::Copy, "tl_basic_PsCopyD", tl_basic_PsCopy_bin);
     LOAD_PS(ShaderOps::Fill, "tl_basic_PsFillD", tl_basic_PsFill_bin);
@@ -252,9 +259,8 @@ namespace TextureLib
     LOAD_PS(ShaderOps::LinearGradient,
         "tl_gradient_PsLinearGradientD",
         tl_gradient_PsLinearGradient_bin);
-    LOAD_PS(ShaderOps::Noise,
-        "tl_noise_PsNoiseD",
-        tl_noise_PsNoise_bin);
+    //LOAD_PS(ShaderOps::Noise, "tl_noise_PsNoiseD", tl_noise_PsNoise_bin);
+    LOAD_PS(ShaderOps::Noise, "tl_noise_PsBrickD", tl_noise_PsBrick_bin);
     LOAD_PS(ShaderOps::Modulate, "tl_arith_PsModulateD", tl_arith_PsModulate_bin);
 
     memset(renderTargets, 0, sizeof(renderTargets));
@@ -288,6 +294,7 @@ namespace TextureLib
     }
 #endif
 
+    g_Initialized = true;
     return true;
   }
 
@@ -311,7 +318,8 @@ namespace TextureLib
         0.f, 0.f, (float)g_Graphics->_backBufferWidth, (float)g_Graphics->_backBufferHeight));
     ctx->PSSetShaderResources(0, 1, &renderTargets[0xff].srv);
     ctx->OMSetRenderTargets(1, &g_Graphics->_renderTargetView, nullptr);
-    ctx->PSSetShader(g_Shaders[(u8)ShaderOps::Copy], nullptr, 0);
+    ctx->PSSetShader(
+        g_Graphics->GetResource<ID3D11PixelShader>(g_Shaders[(u8)ShaderOps::Copy]), nullptr, 0);
     ctx->Draw(6, 0);
   }
 

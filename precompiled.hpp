@@ -1,42 +1,54 @@
 #pragma once
 
 #define WITH_TEXTURE_UPDATE 1
-
+#define WITH_IMGUI 1
 
 #ifdef _DEBUG
-#ifndef WITH_FILE_WATCHER
-#define WITH_FILE_WATCHER 1
-#endif
-#ifndef WITH_DX_CLEANUP
-#define WITH_DX_CLEANUP 1
-#endif
-#ifndef WITH_FP_VALIDATION
-#define WITH_FP_VALIDATION 1
-#endif
-#ifndef WITH_FILE_UTILS
-#define WITH_FILE_UTILS 1
-#endif
-#ifndef WITH_ASSERT
-#define WITH_ASSERT 1
-#endif
+  // DEBUG
+  #ifndef WITH_FILE_WATCHER
+  #define WITH_FILE_WATCHER 1
+  #endif
+  #ifndef WITH_DX_CLEANUP
+  #define WITH_DX_CLEANUP 1
+  #endif
+  #ifndef WITH_FP_VALIDATION
+  #define WITH_FP_VALIDATION 1
+  #endif
+  #ifndef WITH_FILE_UTILS
+  #define WITH_FILE_UTILS 1
+  #endif
+  #ifndef WITH_ASSERT
+  #define WITH_ASSERT 1
+  #endif
+  #ifndef WITH_TEXTURE_UPDATE
+  #define WITH_TEXTURE_UPDATE 1
+  #endif
+  #ifndef WITH_IMGUI
+  #define WITH_IMGUI 1
+  #endif
 #else
-// RELEASE
-#ifndef WITH_FILE_WATCHER
-#define WITH_FILE_WATCHER 0
-#endif
-#ifndef WITH_DX_CLEANUP
-#define WITH_DX_CLEANUP 0
-#endif
-#ifndef WITH_FP_VALIDATION
-#define WITH_FP_VALIDATION 0
-#endif
-#ifndef WITH_FILE_UTILS
-#define WITH_FILE_UTILS 0
-#endif
-#ifndef WITH_ASSERT
-#define WITH_ASSERT 0
-#endif
-
+  // RELEASE
+  #ifndef WITH_FILE_WATCHER
+  #define WITH_FILE_WATCHER 0
+  #endif
+  #ifndef WITH_DX_CLEANUP
+  #define WITH_DX_CLEANUP 0
+  #endif
+  #ifndef WITH_FP_VALIDATION
+  #define WITH_FP_VALIDATION 0
+  #endif
+  #ifndef WITH_FILE_UTILS
+  #define WITH_FILE_UTILS 0
+  #endif
+  #ifndef WITH_ASSERT
+  #define WITH_ASSERT 0
+  #endif
+  #ifndef WITH_TEXTURE_UPDATE
+  #define WITH_TEXTURE_UPDATE 0
+  #endif
+  #ifndef WITH_IMGUI
+  #define WITH_IMGUI 0
+  #endif
 #endif
 
 #if WITH_ASSERT

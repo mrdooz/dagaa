@@ -1,5 +1,9 @@
 #pragma once
+#include <sys/msys_math.hpp>
 #include "object_handle.hpp"
+#if WITH_FILE_WATCHER
+#include <sys/_win32/msys_filewatcherOS.hpp>
+#endif
 
 struct GpuState;
 //-----------------------------------------------------------------------------
@@ -11,6 +15,22 @@ struct RenderTarget
 };
 
 //-----------------------------------------------------------------------------
+struct Texture
+{
+  ObjectHandle texture;
+  ObjectHandle srv;
+};
+
+//-----------------------------------------------------------------------------
+enum class ShaderType
+{
+  VertexShader,
+  PixelShader,
+  ComputeShader,
+  GeometryShader
+};
+
+//-----------------------------------------------------------------------------
 struct DXGraphics
 {
   DXGraphics();
@@ -19,9 +39,23 @@ struct DXGraphics
   void Clear();
   void Present();
 
-  bool CreateRenderTarget(int width, int height, u32* col, ObjectHandle* outTexture, ObjectHandle* outRt, ObjectHandle* outSrv);
+  bool CreateRenderTarget(int width,
+      int height,
+      u32* col,
+      ObjectHandle* outTexture,
+      ObjectHandle* outRt,
+      ObjectHandle* outSrv);
 
-  ObjectHandle CreateShader(const char* filename, const void* buf, int len, ObjectHandle::Type type);
+#if WITH_FILE_WATCHER
+  ObjectHandle CreateShader(const char* filename,
+      const void* buf,
+      int len,
+      ObjectHandle::Type type,
+      const FileWatcherWin32::cbFileChanged& cbChained = FileWatcherWin32::cbFileChanged());
+#else
+  ObjectHandle CreateShader(
+    const char* filename, const void* buf, int len, ObjectHandle::Type type);
+#endif
 
   ObjectHandle CreateBlendState(const D3D11_BLEND_DESC& desc);
   ObjectHandle CreateRasterizerState(const D3D11_RASTERIZER_DESC& desc);
@@ -39,10 +73,17 @@ struct DXGraphics
     return (T*)_resources[h.id].ptr;
   }
 
+  void SetShaderResource(ObjectHandle h, ShaderType type, u32 slot = 0);
+  void SetScissorRect(const D3D11_RECT& r);
+  void SetViewport(const D3D11_VIEWPORT& viewPort);
+
   ObjectHandle CreateSamplerState(const D3D11_SAMPLER_DESC& desc);
   ObjectHandle AddResource(ObjectHandle::Type type, void* resource, u32 hash = 0);
   void ReleaseResource(ObjectHandle h);
   int FindFreeResource(int start);
+
+  void SetRenderTarget(
+      ObjectHandle renderTarget, ObjectHandle depthStencil, const color* clearTarget);
 
   bool CreateBufferInner(
       D3D11_BIND_FLAG bind, int size, bool dynamic, const void* data, ID3D11Buffer** buffer);
@@ -74,6 +115,7 @@ struct DXGraphics
   ID3D11Device* _device;
   ID3D11DeviceContext* _context;
 
+  DXGI_SWAP_CHAIN_DESC _swapChainDesc;
   IDXGISwapChain* _swapChain;
   ID3D11RenderTargetView* _renderTargetView;
   ID3D11Texture2D* _backBuffer;
@@ -82,6 +124,9 @@ struct DXGraphics
   ID3D11DepthStencilView* _depthStencilView;
 
   CD3D11_VIEWPORT _viewport;
+
+  ObjectHandle _defaultBackBuffer;
+  ObjectHandle _defaultDepthStencil;
 
   int _backBufferWidth, _backBufferHeight;
 

@@ -1,5 +1,7 @@
 #include "tl_common.hlsl"
 
+// cb-meta-begin: PsLinearGradient
+// cb-meta-end
 cbuffer cbLinearGradient : register(b1)
 {
   float2 pos0;
@@ -7,6 +9,8 @@ cbuffer cbLinearGradient : register(b1)
   float linPower;
 };
 
+// cb-meta-begin: PsRadialGradient 
+// cb-meta-end
 cbuffer cbRadialGradient : register(b1)
 {
   float2 center;
@@ -28,7 +32,7 @@ float4 PsLinearGradient(VSQuadOut p) : SV_Target
 }
 
 //------------------------------------------------------
-// entry-point: ps
+// full-screen-entry-point: ps
 float4 PsRadialGradient(VSQuadOut p) : SV_Target
 {
   float2 xy = -0.5 + p.pos.xy / dim;

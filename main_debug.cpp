@@ -152,7 +152,6 @@ static void procMouse(void)
 }
 
 //----------------------------------------------------------------------------
-
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
   int i;

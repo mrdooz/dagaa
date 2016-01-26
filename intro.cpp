@@ -5,6 +5,7 @@
 #include "sys/msys.h"
 #include "sys/msys_graphics.hpp"
 #include "intro.h"
+#include "sys/shader_manifest_loader.hpp"
 
 typedef struct
 {
@@ -23,6 +24,7 @@ static IntroObject intro;
 
 int intro_init(int xr, int yr, int nomusic, IntroProgressDelegate* pd)
 {
+  g_ShaderManifestLoader.AddManifest("c:/projects/dagaa/shaders/out/tl_gradient.manifest");
   // progress report, (from 0 to 200)
   pd->func(pd->obj, 0);
 

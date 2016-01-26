@@ -1,16 +1,13 @@
 #pragma once
 
-namespace tokko
+#if WITH_FILE_UTILS
+struct ShaderManifestLoader
 {
-  struct ShaderManifestLoader
-  {
-    bool Create();
-    bool Destroy();
+  bool Create();
+  bool Destroy();
 
-    bool AddManifest(const char* manifest);
+  bool AddManifest(const char* manifest);
+};
 
-  };
-
-  extern ShaderManifestLoader g_ShaderManifestLoader;
-}
-
+extern ShaderManifestLoader g_ShaderManifestLoader;
+#endif
