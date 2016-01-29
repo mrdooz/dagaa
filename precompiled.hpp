@@ -1,7 +1,7 @@
 #pragma once
 
-#define WITH_TEXTURE_UPDATE 1
-#define WITH_IMGUI 1
+//#define WITH_TEXTURE_UPDATE 1
+//#define WITH_IMGUI 1
 
 #ifdef _DEBUG
   // DEBUG
@@ -52,8 +52,14 @@
 #endif
 
 #if WITH_ASSERT
-#include <assert.h>
-#define ASSERT(x) assert(x)
+#define ASSERT(x) \
+if (!(x)) \
+{   \
+  char buf[1024];  \
+  sprintf(buf, "%s(%d): ASSERT FAILED: %s\n", __FILE__, __LINE__, #x);\
+  OutputDebugStringA(buf);\
+  __asm { int 3 } \
+}
 #else
 #define ASSERT(x)
 #endif
@@ -91,3 +97,7 @@ typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
+
+#if WITH_IMGUI
+#include <contrib/imgui/imgui.h>
+#endif

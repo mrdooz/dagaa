@@ -6,20 +6,7 @@
 #endif
 
 struct GpuState;
-//-----------------------------------------------------------------------------
-struct RenderTarget
-{
-  ObjectHandle texture;
-  ObjectHandle srv;
-  ObjectHandle rt;
-};
-
-//-----------------------------------------------------------------------------
-struct Texture
-{
-  ObjectHandle texture;
-  ObjectHandle srv;
-};
+struct GpuObjects;
 
 //-----------------------------------------------------------------------------
 enum class ShaderType
@@ -33,18 +20,36 @@ enum class ShaderType
 //-----------------------------------------------------------------------------
 struct DXGraphics
 {
+  struct RenderTarget
+  {
+    ObjectHandle texture;
+    ObjectHandle srv;
+    ObjectHandle rtv;
+  };
+
+  struct Texture
+  {
+    ObjectHandle texture;
+    ObjectHandle srv;
+  };
+
   DXGraphics();
   int Init(HWND h, u32 width, u32 height);
   void Close();
   void Clear();
   void Present();
 
-  bool CreateRenderTarget(int width,
-      int height,
-      u32* col,
-      ObjectHandle* outTexture,
-      ObjectHandle* outRt,
-      ObjectHandle* outSrv);
+  ObjectHandle CreateRenderTarget(int width, int height, bool createSrv);
+  ObjectHandle CreateTexture(
+      int width, int height, DXGI_FORMAT fmt, void* data, int data_width = -1);
+
+#if WITH_FILE_UTILS
+  std::pair<ObjectHandle, ObjectHandle> LoadVertexShader(const char* filename,
+      D3D11_INPUT_ELEMENT_DESC* inputElements = nullptr,
+      int numElements = 0);
+
+  ObjectHandle LoadPixelShader(const char* filename);
+#endif
 
 #if WITH_FILE_WATCHER
   ObjectHandle CreateShader(const char* filename,
@@ -54,7 +59,7 @@ struct DXGraphics
       const FileWatcherWin32::cbFileChanged& cbChained = FileWatcherWin32::cbFileChanged());
 #else
   ObjectHandle CreateShader(
-    const char* filename, const void* buf, int len, ObjectHandle::Type type);
+    const char* filename, const void* buf, int len, ObjectHandle::Type type, const void*);
 #endif
 
   ObjectHandle CreateBlendState(const D3D11_BLEND_DESC& desc);
@@ -70,7 +75,16 @@ struct DXGraphics
   template <typename T>
   T* GetResource(ObjectHandle h)
   {
+    if (!h.IsValid())
+      return nullptr;
     return (T*)_resources[h.id].ptr;
+  }
+
+  template <>
+  RenderTarget* GetResource(ObjectHandle h)
+  {
+    RenderTargetResource* res = (RenderTargetResource*)_resources[h.id].ptr;
+    return &res->data;
   }
 
   void SetShaderResource(ObjectHandle h, ShaderType type, u32 slot = 0);
@@ -98,6 +112,8 @@ struct DXGraphics
 
   void CopyToBuffer(ObjectHandle h, const void* data, u32 len);
 
+  void SetConstantBuffer(ObjectHandle h, ShaderType type, int slot);
+  void SetGpuObjects(const GpuObjects& objects);
   void SetGpuState(const GpuState& state);
   ObjectHandle FindByHash(u32 hash, ObjectHandle::Type type);
 
@@ -142,12 +158,45 @@ struct DXGraphics
     u32 hash;
   };
 
-  enum { MAX_NUM_RESOURCES = 1 << 7 };
+  template <typename T>
+  struct ResourceData
+  {
+    enum Flags {
+      FlagsFree = (1 << 0),
+    };
+    u32 flags;
+    T data;
+  };
+
+  typedef ResourceData<RenderTarget> RenderTargetResource;
+  typedef ResourceData<Texture> TextureResource;
+
+  template <typename T>
+  int FindFreeResourceData(const ResourceData<T>* buf);
+  template <typename T>
+  void InitResourceData(ResourceData<T>* buf);
+
+  enum { MAX_NUM_RESOURCES = 1 << ObjectHandle::NUM_ID_BITS };
   Resource _resources[MAX_NUM_RESOURCES];
   int _firstFreeResource = -1;
+  RenderTargetResource _renderTargets[MAX_NUM_RESOURCES];
+  TextureResource _textures[MAX_NUM_RESOURCES];
 
   bool _vsync = true;
 };
+
+template <typename T>
+T* DXGraphics::MapWriteDiscard(ObjectHandle h, int* pitch)
+{
+  D3D11_MAPPED_SUBRESOURCE res;
+  if (!SUCCEEDED(Map(h, 0, D3D11_MAP_WRITE_DISCARD, 0, &res)))
+    return nullptr;
+
+  if (pitch)
+    *pitch = res.RowPitch;
+
+  return (T*)res.pData;
+}
 
 extern ObjectHandle g_DefaultBlendState;
 extern ObjectHandle g_DefaultRasterizerState;

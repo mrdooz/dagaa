@@ -15,7 +15,7 @@
 #include "msys_font.h"
 #include "msys_debug.h"
 
-int msys_init(intptr h);
+int msys_init(intptr h, int width, int height);
 void msys_end(void);
 
 #endif

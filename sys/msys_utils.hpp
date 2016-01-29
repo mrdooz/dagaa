@@ -1,5 +1,6 @@
 #pragma once
 
+//------------------------------------------------------------------------------
 struct BinaryReader
 {
   BinaryReader(const char* buf, int len) : buf(buf), len(len), idx(0) {}
@@ -25,3 +26,14 @@ struct BinaryReader
   int len;
   mutable int idx;
 };
+
+//------------------------------------------------------------------------------
+u32 FnvHash(const char* str, int len, u32 d = 0);
+u32 SizeFromFormat(DXGI_FORMAT format);
+
+//------------------------------------------------------------------------------
+template <typename T>
+u32 CalcHash(const T& t)
+{
+  return FnvHash((const char*)&t, sizeof(T));
+}

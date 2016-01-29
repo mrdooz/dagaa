@@ -80,7 +80,7 @@ bool ShaderManifestLoader::Destroy()
 }
 
 //------------------------------------------------------------------------------
-static string ExtraTagValue(const char* str, const char* tag)
+static string ExtractTagValue(const char* str, const char* tag)
 {
   const char* valueStart = strstr(str, tag);
   if (!valueStart)
@@ -135,15 +135,11 @@ bool ShaderManifestLoader::AddManifest(const char* manifest)
       else if (inCbuffer)
       {
         const char* s = str.c_str();
-        string name = ExtraTagValue(s, "name:");
-        string type = ExtraTagValue(s, "type:");
-        string range = ExtraTagValue(s, "range:");
-        int a = 10;
+        string name = ExtractTagValue(s, "name:");
+        string type = ExtractTagValue(s, "type:");
+        string range = ExtractTagValue(s, "range:");
       }
     }
-
-    // OutputDebugStringA(str.c_str());
-    // OutputDebugStringA("\n");
   }
 
   return true;

@@ -25,6 +25,7 @@ bool GpuObjects::CreateDynamicVb(u32 vbSize, u32 vbElemSize, const void* vbData)
   _vbElemSize = vbElemSize;
   _numVerts = _vbSize / _vbElemSize;
   _vb = g_Graphics->CreateBuffer(D3D11_BIND_VERTEX_BUFFER, vbSize, true, vbData);
+  _vb.userdata = vbElemSize;
   return _vb.IsValid();
 }
 

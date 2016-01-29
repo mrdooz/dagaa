@@ -1,7 +1,12 @@
 #include "msys_graphics.hpp"
 #include "msys_libc.h"
 #include "_win32/msys_filewatcherOS.hpp"
-#include "../texturelib/texturelib.hpp"
+#include "gpu_objects.hpp"
+#include "msys_utils.hpp"
+
+#if WITH_FILE_UTILS
+#include <sys/msys_file.hpp>
+#endif
 
 #define DEFAULTS_TO_ZERO(type, val)
 
@@ -17,25 +22,10 @@ ObjectHandle g_DepthDisabledState;
   if (FAILED(x))                                                                                   \
     return 0;
 
-//------------------------------------------------------------------------------
-static u32 FnvHash(const char* str, int len, u32 d = 0)
+//-----------------------------------------------------------------------------
+DXGraphics::DXGraphics()
 {
-  if (d == 0)
-    d = 0x01000193;
-
-  for (int i = 0; i < len; ++i)
-  {
-    char c = str[i];
-    d = ((d * 0x01000193) ^ c) & 0xffffffff;
-  }
-  return d;
-}
-
-//------------------------------------------------------------------------------
-template <typename T>
-u32 CalcHash(const T& t)
-{
-  return FnvHash((const char*)&t, sizeof(T));
+  msys_zeromem((void*)&_resources[0], sizeof(_resources));
 }
 
 //------------------------------------------------------------------------------
@@ -122,16 +112,12 @@ void DXGraphics::CopyToBuffer(ObjectHandle h, const void* data, u32 len)
 }
 
 //-----------------------------------------------------------------------------
-DXGraphics::DXGraphics()
-{
-  msys_zeromem((void*)&_resources[0], sizeof(_resources));
-}
-
-//-----------------------------------------------------------------------------
 void DXGraphics::Clear()
 {
   float black[4] = {0.1f, 0.1f, 0.1f, 0.1f};
   _context->ClearRenderTargetView(_renderTargetView, black);
+  _context->ClearDepthStencilView(
+      _depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 }
 
 //-----------------------------------------------------------------------------
@@ -146,7 +132,8 @@ static void InitTextureDesc(D3D11_TEXTURE2D_DESC* desc,
     u32 height,
     D3D11_USAGE usage,
     DXGI_FORMAT fmt,
-    D3D11_BIND_FLAG bindFlag)
+    D3D11_BIND_FLAG bindFlag,
+    u32 cpuAccessFlags = 0)
 {
   msys_memset(desc, 0, sizeof(D3D11_TEXTURE2D_DESC));
   desc->Width = width;
@@ -159,8 +146,8 @@ static void InitTextureDesc(D3D11_TEXTURE2D_DESC* desc,
   desc->Usage = usage;
   desc->Format = fmt;
   desc->BindFlags = bindFlag;
+  desc->CPUAccessFlags = cpuAccessFlags;
 
-  DEFAULTS_TO_ZERO(desc->CPUAccessFlags, 0);
   DEFAULTS_TO_ZERO(desc->MiscFlags, 0);
 }
 
@@ -183,23 +170,48 @@ ObjectHandle DXGraphics::AddResource(ObjectHandle::Type type, void* resource, u3
   _firstFreeResource = -1;
 
   _resources[idx] = Resource{resource, type, 0, hash};
-  return ObjectHandle(type, idx);
+  ObjectHandle h = ObjectHandle(type, idx);
+  return h;
+}
+
+//-----------------------------------------------------------------------------
+void DXGraphics::SetConstantBuffer(ObjectHandle h, ShaderType type, int slot)
+{
+  ID3D11Buffer* cbs[] = { GetResource<ID3D11Buffer>(h) };
+  switch (type)
+  {
+    case ShaderType::VertexShader: _context->VSSetConstantBuffers(slot, 1, cbs); break;
+    case ShaderType::PixelShader: _context->PSSetConstantBuffers(slot, 1, cbs); break;
+  }
+}
+
+//-----------------------------------------------------------------------------
+void DXGraphics::SetGpuObjects(const GpuObjects& objects)
+{
+  u32 strides[] = { objects._vb.userdata };
+  u32 ofs[] = { 0 };
+  ID3D11Buffer* vbs[] = { GetResource<ID3D11Buffer>(objects._vb) };
+
+  _context->IASetPrimitiveTopology(objects._topology);
+  _context->IASetIndexBuffer(GetResource<ID3D11Buffer>(objects._ib), DXGI_FORMAT_R32_UINT, 0);
+  _context->IASetInputLayout(GetResource<ID3D11InputLayout>(objects._layout));
+  _context->IASetVertexBuffers(0, 1, vbs, strides, ofs);
+
+  _context->VSSetShader(GetResource<ID3D11VertexShader>(objects._vs), NULL, 0);
+  _context->PSSetShader(GetResource<ID3D11PixelShader>(objects._ps), NULL, 0);
 }
 
 //-----------------------------------------------------------------------------
 void DXGraphics::SetGpuState(const GpuState& state)
 {
-  // TODO(magnus): hmm..
-  //float blendFactor[4] = { 1, 1, 1, 1 };
-  //context->OMSetBlendState(
-  //  g_Graphics->GetResource<ID3D11BlendState>(g_DefaultBlendState), blendFactor, 0xffffffff);
-  //context->RSSetState(g_Graphics->GetResource<ID3D11RasterizerState>(g_DefaultRasterizerState));
-  //context->OMSetDepthStencilState(
-  //  g_Graphics->GetResource<ID3D11DepthStencilState>(g_DepthDisabledState), 0);
+  float blendFactor[4] = {1, 1, 1, 1};
+  _context->OMSetBlendState(
+      GetResource<ID3D11BlendState>(state._blendState), blendFactor, 0xffffffff);
+  _context->RSSetState(GetResource<ID3D11RasterizerState>(state._rasterizerState));
+  _context->OMSetDepthStencilState(GetResource<ID3D11DepthStencilState>(state._depthStencilState), 0);
 
-  //ID3D11SamplerState* sampler =
-  //  g_Graphics->GetResource<ID3D11SamplerState>(g_Graphics->_samplers[DXGraphics::Linear]);
-  //context->PSSetSamplers(1, 1, &sampler);
+  ID3D11SamplerState* sampler = GetResource<ID3D11SamplerState>(_samplers[DXGraphics::Linear]);
+  _context->PSSetSamplers(1, 1, &sampler);
 }
 
 //-----------------------------------------------------------------------------
@@ -210,10 +222,17 @@ void DXGraphics::ReleaseResource(ObjectHandle h)
     return;
 
 #define RELEASE_RESOURCE(type, klass)                                                              \
-  case ObjectHandle::type: ((klass*)_resources[idx].ptr)->Release(); break;
+  case ObjectHandle::type:                                                                         \
+    if (_resources[idx].ptr)                                                                       \
+    {                                                                                              \
+      ((klass*)_resources[idx].ptr)->Release();                                                    \
+      _resources[idx].ptr = nullptr;                                                               \
+    }                                                                                              \
+    break;
 
   switch (_resources[idx].type)
   {
+    RELEASE_RESOURCE(InputLayout, ID3D11InputLayout);
     RELEASE_RESOURCE(VertexShader, ID3D11VertexShader);
     RELEASE_RESOURCE(PixelShader, ID3D11PixelShader);
 
@@ -227,11 +246,32 @@ void DXGraphics::ReleaseResource(ObjectHandle h)
 
     RELEASE_RESOURCE(Texture, ID3D11Texture2D);
     RELEASE_RESOURCE(RenderTargetView, ID3D11RenderTargetView);
+    RELEASE_RESOURCE(DepthStencilView, ID3D11DepthStencilView);
     RELEASE_RESOURCE(ShaderResourceView, ID3D11ShaderResourceView);
 
     RELEASE_RESOURCE(Sampler, ID3D11SamplerState);
 
-  default: ASSERT(!"Unhandled resource type!");
+    case ObjectHandle::RenderTargetData:
+    {
+      RenderTargetResource* rt = (RenderTargetResource*)_resources[idx].ptr;
+      ReleaseResource(rt->data.texture);
+      ReleaseResource(rt->data.rtv);
+      if (rt->data.srv.IsValid())
+        ReleaseResource(rt->data.srv);
+      rt->flags &= ~RenderTargetResource::FlagsFree;
+      break;
+    }
+
+    case ObjectHandle::TextureData:
+    {
+      TextureResource* t = (TextureResource*)_resources[idx].ptr;
+      ReleaseResource(t->data.texture);
+      ReleaseResource(t->data.srv);
+      t->flags &= ~TextureResource::FlagsFree;
+      break;
+    }
+
+    default: ASSERT(!"Unhandled resource type!");
   }
 
   _firstFreeResource = idx;
@@ -241,63 +281,105 @@ void DXGraphics::ReleaseResource(ObjectHandle h)
 }
 
 //-----------------------------------------------------------------------------
-bool DXGraphics::CreateRenderTarget(int width,
-    int height,
-    u32* col,
-    ObjectHandle* outTexture,
-    ObjectHandle* outRt,
-    ObjectHandle* outSrv)
+ObjectHandle DXGraphics::CreateRenderTarget(int width, int height, bool createSrv)
 {
   D3D11_TEXTURE2D_DESC desc;
 
   D3D11_BIND_FLAG bindFlags = D3D11_BIND_RENDER_TARGET;
-  if (outSrv)
+  if (createSrv)
     bindFlags = (D3D11_BIND_FLAG)(bindFlags | D3D11_BIND_SHADER_RESOURCE);
 
   InitTextureDesc(&desc, width, height, D3D11_USAGE_DEFAULT, DXGI_FORMAT_R8G8B8A8_UNORM, bindFlags);
 
-  D3D11_SUBRESOURCE_DATA data;
-  u32* tmp = nullptr;
-  if (col)
-  {
-    int len = width * height;
-    tmp = new u32[len];
-    for (int i = 0; i < len; ++i)
-    {
-      tmp[i] = *col;
-    }
-    data.pSysMem = tmp;
-    data.SysMemPitch = sizeof(u32) * width;
-    data.SysMemSlicePitch = data.SysMemPitch * height;
-  }
-
   ID3D11Texture2D* t;
-  HRESULT hr = _device->CreateTexture2D(&desc, tmp ? &data : nullptr, &t);
-  delete [] tmp;
-  if (FAILED(hr))
-    return false;
+  if (FAILED(_device->CreateTexture2D(&desc, nullptr, &t)))
+    g_EmptyHandle;
 
-  ObjectHandle hTexture = AddResource(ObjectHandle::Texture, t);
+  RenderTargetResource* rtData = &_renderTargets[FindFreeResourceData(_renderTargets)];
+  ObjectHandle hData = AddResource(ObjectHandle::RenderTargetData, rtData);
+  rtData->data.texture = AddResource(ObjectHandle::Texture, t);
 
-  // TODO: this is broken.. we need to create a rtv as well
   CD3D11_RENDER_TARGET_VIEW_DESC rtDesc =
       CD3D11_RENDER_TARGET_VIEW_DESC(D3D11_RTV_DIMENSION_TEXTURE2D, desc.Format);
   ID3D11RenderTargetView* rtv;
   _device->CreateRenderTargetView(t, &rtDesc, &rtv);
-  *outRt = AddResource(ObjectHandle::RenderTargetView, rtv);
+  rtData->data.rtv = AddResource(ObjectHandle::RenderTargetView, rtv);
+
+  // create SRV
+  if (createSrv)
+  {
+    D3D11_SRV_DIMENSION dim = D3D11_SRV_DIMENSION_TEXTURE2D;
+    CD3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = CD3D11_SHADER_RESOURCE_VIEW_DESC(dim, desc.Format);
+    ID3D11ShaderResourceView* srv;
+    if (FAILED(_device->CreateShaderResourceView(t, &srvDesc, &srv)))
+      return g_EmptyHandle;
+    rtData->data.srv = AddResource(ObjectHandle::ShaderResourceView, srv);
+  }
+
+  return hData;
+}
+
+//-----------------------------------------------------------------------------
+ObjectHandle DXGraphics::CreateTexture(
+  int width, int height, DXGI_FORMAT fmt, void* data, int dataWidth)
+{
+  D3D11_TEXTURE2D_DESC desc;
+
+  D3D11_BIND_FLAG bindFlags = D3D11_BIND_SHADER_RESOURCE;
+  InitTextureDesc(&desc,
+      width,
+      height,
+      data ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_DEFAULT,
+      DXGI_FORMAT_R8G8B8A8_UNORM,
+      bindFlags,
+      data ? D3D11_CPU_ACCESS_WRITE : 0);
+
+  ID3D11Texture2D* t;
+  if (FAILED(_device->CreateTexture2D(&desc, nullptr, &t)))
+    g_EmptyHandle;
+
+  TextureResource* tData = &_textures[FindFreeResourceData(_textures)];
+  ObjectHandle hData = AddResource(ObjectHandle::TextureData, tData);
+  tData->data.texture = AddResource(ObjectHandle::Texture, t);
 
   // create SRV
   D3D11_SRV_DIMENSION dim = D3D11_SRV_DIMENSION_TEXTURE2D;
   CD3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = CD3D11_SHADER_RESOURCE_VIEW_DESC(dim, desc.Format);
   ID3D11ShaderResourceView* srv;
   if (FAILED(_device->CreateShaderResourceView(t, &srvDesc, &srv)))
-    return false;
+    return g_EmptyHandle;
+  tData->data.srv = AddResource(ObjectHandle::ShaderResourceView, srv);
 
-  *outTexture = hTexture;
-  *outSrv = AddResource(ObjectHandle::ShaderResourceView, srv);
+  if (data)
+  {
+    D3D11_MAPPED_SUBRESOURCE resource;
+    if (SUCCEEDED(_context->Map(t, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource)))
+    {
+      uint8_t* src = (uint8_t*)data;
+      uint8_t* dst = (uint8_t*)resource.pData;
+      const int w = dataWidth == -1 ? width : msys_min(width, dataWidth);
+      const int h = height;
+      // TODO(magnus): hardcoded pitch
+      const int pitch = width * 4; 
 
-  return true;
+      if (pitch == resource.RowPitch)
+      {
+        memcpy(dst, src, h * pitch);
+      }
+      else
+      {
+        for (int i = 0; i < h; ++i)
+        {
+          memcpy(dst, src, pitch);
+          src += pitch;
+          dst += resource.RowPitch;
+        }
+      }
+      _context->Unmap(t, 0);
+    }
+  }
 
+  return hData;
 }
 
 //-----------------------------------------------------------------------------
@@ -305,7 +387,11 @@ ObjectHandle DXGraphics::CreateShader(const char* filename,
     const void* buf,
     int len,
     ObjectHandle::Type type,
+#if WITH_FILE_WATCHER
     const FileWatcherWin32::cbFileChanged& cbChained)
+#else
+    const void*)
+#endif
 {
 #if WITH_FILE_WATCHER
   ObjectHandle h = ReserveHandle(type);
@@ -416,7 +502,7 @@ int DXGraphics::CreateDevice(HWND h, u32 width, u32 height)
   // Create render target view for backbuffer
   _swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&_backBuffer);
   _device->CreateRenderTargetView(_backBuffer, 0, &_renderTargetView);
-  AddResource(ObjectHandle::RenderTargetView, _renderTargetView);
+  _defaultBackBuffer = AddResource(ObjectHandle::RenderTargetView, _renderTargetView);
   _backBuffer->Release();
 
   dxgiDevice->Release();
@@ -434,7 +520,7 @@ int DXGraphics::CreateDevice(HWND h, u32 width, u32 height)
 
   HR(_device->CreateTexture2D(&depthStencilDesc, 0, &_depthStencilBuffer));
   HR(_device->CreateDepthStencilView(_depthStencilBuffer, 0, &_depthStencilView));
-  AddResource(ObjectHandle::DepthStencilView, _depthStencilView);
+  _defaultDepthStencil = AddResource(ObjectHandle::DepthStencilView, _depthStencilView);
 
   _viewport = CD3D11_VIEWPORT(0.f, 0.f, (float)width, (float)height);
 
@@ -527,7 +613,7 @@ ObjectHandle DXGraphics::ReserveHandle(ObjectHandle::Type type)
 //-----------------------------------------------------------------------------
 void DXGraphics::UpdateHandle(ObjectHandle handle, void* buf)
 {
-  _resources[handle.id] = Resource{buf, handle.type, 0};
+  _resources[handle.id] = Resource{buf, handle.type};
 }
 
 //-----------------------------------------------------------------------------
@@ -539,6 +625,10 @@ int DXGraphics::Init(HWND h, u32 width, u32 height)
   int res = CreateDevice(h, width, height);
   CreateDefaultStates();
   _context->OMSetRenderTargets(1, &_renderTargetView, _depthStencilView);
+
+  InitResourceData(_renderTargets);
+  InitResourceData(_textures);
+
   return 1;
 }
 
@@ -574,6 +664,9 @@ ObjectHandle DXGraphics::CreateSamplerState(const D3D11_SAMPLER_DESC& desc)
 void DXGraphics::SetRenderTarget(
   ObjectHandle renderTarget, ObjectHandle depthStencil, const color* clearTarget)
 {
+  ID3D11RenderTargetView* rtViews[] = { GetResource<ID3D11RenderTargetView>(renderTarget) };
+
+  _context->OMSetRenderTargets(1, rtViews, GetResource<ID3D11DepthStencilView>(depthStencil));
 }
 
 //------------------------------------------------------------------------------
@@ -601,3 +694,79 @@ void DXGraphics::SetScissorRect(const D3D11_RECT& r)
 {
   _context->RSSetScissorRects(1, &r);
 }
+
+//------------------------------------------------------------------------------
+template <typename T>
+int DXGraphics::FindFreeResourceData(const ResourceData<T>* buf)
+{
+  for (int i = 0; i < MAX_NUM_RESOURCES; ++i)
+  {
+    if (buf[i].flags == ResourceData<T>::FlagsFree)
+      return i;
+  }
+
+  ASSERT(!"No free resource found!");
+  return -1;
+}
+
+//------------------------------------------------------------------------------
+template <typename T>
+void DXGraphics::InitResourceData(ResourceData<T>* buf)
+{
+  for (int i = 0; i < MAX_NUM_RESOURCES; ++i)
+  {
+    buf[i].flags = ResourceData<T>::FlagsFree;
+  }
+}
+
+//------------------------------------------------------------------------------
+#if WITH_FILE_UTILS
+std::pair<ObjectHandle, ObjectHandle> DXGraphics::LoadVertexShader(
+    const char* filename, D3D11_INPUT_ELEMENT_DESC* inputElements, int numElements)
+{
+  std::vector<char> buf;
+  if (LoadFile(filename, &buf))
+  {
+    ID3D11VertexShader* vs;
+    if (SUCCEEDED(_device->CreateVertexShader(buf.data(), buf.size(), nullptr, &vs)))
+    {
+      ObjectHandle hVs = AddResource(ObjectHandle::VertexShader, vs);
+      if (!inputElements)
+        return std::make_pair(hVs, g_EmptyHandle);
+
+      u32 ofs = 0;
+      for (int i = 0; i < numElements; ++i)
+      {
+        D3D11_INPUT_ELEMENT_DESC& e = inputElements[i];
+        e.AlignedByteOffset = ofs;
+        ofs += SizeFromFormat(e.Format);
+      }
+
+      ID3D11InputLayout* layout;
+      if (SUCCEEDED(_device->CreateInputLayout(
+        inputElements, numElements, buf.data(), buf.size(), &layout)))
+      {
+        return std::make_pair(hVs, AddResource(ObjectHandle::InputLayout, layout));
+      }
+    }
+  }
+  return std::make_pair(g_EmptyHandle, g_EmptyHandle);
+}
+
+//------------------------------------------------------------------------------
+ObjectHandle DXGraphics::LoadPixelShader(const char* filename)
+{
+  std::vector<char> buf;
+  if (LoadFile(filename, &buf))
+  {
+    ID3D11PixelShader* ps;
+    if (SUCCEEDED(_device->CreatePixelShader(buf.data(), buf.size(), nullptr, &ps)))
+    {
+      return AddResource(ObjectHandle::PixelShader, ps);
+    }
+  }
+  return g_EmptyHandle;
+}
+
+#endif
+

@@ -146,7 +146,6 @@
     <ClCompile Include="..\sys\free_list.cpp" />
     <ClCompile Include="..\sys\gpu_objects.cpp" />
     <ClCompile Include="..\sys\imgui_helpers.cpp" />
-    <ClCompile Include="..\sys\imgui_wrapper.cpp" />
     <ClCompile Include="..\sys\msys.cpp" />
     <ClCompile Include="..\sys\msys_arena_allocator.cpp" />
     <ClCompile Include="..\sys\msys_file.cpp" />

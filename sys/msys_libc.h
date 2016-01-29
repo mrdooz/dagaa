@@ -53,4 +53,7 @@ int msys_ifloorf(const float x);
 #define msys_memcpy(a, b, c) memcpy(a, b, c)
 #define msys_strlen(a) strlen(a)
 
+#define msys_min(a, b) ((a) <= (b) ? (a) : (b))
+#define msys_max(a, b) ((a) >= (b) ? (a) : (b))
+
 #endif

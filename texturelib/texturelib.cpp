@@ -48,11 +48,10 @@ namespace TextureLib
 
   struct
   {
-    ObjectHandle hTexture;
-    ObjectHandle hSrv;
     ObjectHandle hRt;
+    DXGraphics::RenderTarget* rt;
     ID3D11ShaderResourceView* srv;
-    ID3D11RenderTargetView* rt;
+    ID3D11RenderTargetView* rtv;
   } renderTargets[256];
 
   static const int NUM_AUX_TEXTURES = 16;
@@ -154,14 +153,12 @@ namespace TextureLib
     // create any required outputs
     for (int i = NUM_AUX_TEXTURES; i < prg.texturesUsed; ++i)
     {
-      u32 black = 0;
-      ObjectHandle hTexture, hRt, hSrv;
-      g_Graphics->CreateRenderTarget(TEXTURE_SIZE, TEXTURE_SIZE, &black, &hTexture, &hRt, &hSrv);
-      renderTargets[i].hTexture = hTexture;
-      renderTargets[i].hSrv = hSrv;
+      ObjectHandle hRt = g_Graphics->CreateRenderTarget(TEXTURE_SIZE, TEXTURE_SIZE, true);
+      DXGraphics::RenderTarget* rt = g_Graphics->GetResource<DXGraphics::RenderTarget>(hRt);
       renderTargets[i].hRt = hRt;
-      renderTargets[i].srv = g_Graphics->GetResource<ID3D11ShaderResourceView>(hSrv);
-      renderTargets[i].rt = g_Graphics->GetResource<ID3D11RenderTargetView>(hRt);
+      renderTargets[i].rt = rt;
+      renderTargets[i].srv = g_Graphics->GetResource<ID3D11ShaderResourceView>(rt->srv);
+      renderTargets[i].rtv = g_Graphics->GetResource<ID3D11RenderTargetView>(rt->rtv);
     }
 
     ID3D11DeviceContext* ctx = g_Graphics->_context;
@@ -194,7 +191,7 @@ namespace TextureLib
       }
 
       // Set render target and draw
-      ctx->OMSetRenderTargets(1, &renderTargets[rtIdx].rt, nullptr);
+      ctx->OMSetRenderTargets(1, &renderTargets[rtIdx].rtv, nullptr);
       ASSERT(g_Shaders.contains(opIdx));
       ctx->PSSetShader(g_Graphics->GetResource<ID3D11PixelShader>(g_Shaders[opIdx]), nullptr, 0);
       ctx->Draw(6, 0);
@@ -212,12 +209,11 @@ namespace TextureLib
     // Free any temporary render targets
     for (int i = NUM_AUX_TEXTURES; i < prg.texturesUsed; ++i)
     {
-      g_Graphics->ReleaseResource(renderTargets[i].hTexture);
       g_Graphics->ReleaseResource(renderTargets[i].hRt);
-      g_Graphics->ReleaseResource(renderTargets[i].hSrv);
     }
   }
 
+#if WITH_FILE_UTILS
   static bool OnShaderChanged(const char* filename, const char* buf, int len)
   {
     if (!g_Initialized)
@@ -231,14 +227,20 @@ namespace TextureLib
     }
     return true;
   }
-
+#else
+  static bool OnShaderChanged(const char* filename, const char* buf, int len)
+  {
+    return true;
+  }
+#endif
   //-----------------------------------------------------------------------------
   bool Init()
   {
     g_vsFullScreen = g_Graphics->CreateShader(FW_STR("shaders/out/tl_common_VsQuadD.vso"),
         tl_common_VsQuad_bin,
         sizeof(tl_common_VsQuad_bin),
-        ObjectHandle::VertexShader);
+        ObjectHandle::VertexShader,
+        nullptr);
 
     g_cbCommon =
         g_Graphics->CreateBuffer(D3D11_BIND_CONSTANT_BUFFER, sizeof(cbCommon), true, nullptr);
@@ -268,24 +270,22 @@ namespace TextureLib
     // create the aux textures, and the required outputs
     for (int i = 255, j = 0; j <= NUM_AUX_TEXTURES; i = j++)
     {
-      u32 black = 0;
-      ObjectHandle hTexture, hRt, hSrv;
-      g_Graphics->CreateRenderTarget(TEXTURE_SIZE, TEXTURE_SIZE, &black, &hTexture, &hRt, &hSrv);
-      renderTargets[i].hTexture = hTexture;
-      renderTargets[i].hSrv = hSrv;
+      ObjectHandle hRt = g_Graphics->CreateRenderTarget(TEXTURE_SIZE, TEXTURE_SIZE, true);
+      DXGraphics::RenderTarget* rt = g_Graphics->GetResource<DXGraphics::RenderTarget>(hRt);
       renderTargets[i].hRt = hRt;
-      renderTargets[i].srv = g_Graphics->GetResource<ID3D11ShaderResourceView>(hSrv);
-      renderTargets[i].rt = g_Graphics->GetResource<ID3D11RenderTargetView>(hRt);
+      renderTargets[i].rt = rt;
+      renderTargets[i].srv = g_Graphics->GetResource<ID3D11ShaderResourceView>(rt->srv);
+      renderTargets[i].rtv = g_Graphics->GetResource<ID3D11RenderTargetView>(rt->rtv);
     }
 
 #if WITH_TEXTURE_UPDATE
     g_eventNewData = CreateEvent(NULL, FALSE, FALSE, NULL);
-#endif
 
     DWORD threadId;
     g_updateThread = CreateThread(NULL, 0, ThreadProc, NULL, 0, &threadId);
+#endif
 
-#if LOAD_FROM_FILE
+#if LOAD_FROM_FILE && WITH_FILE_UTILS
     std::vector<char> buf;
     if (LoadFile("c:/users/magnus/documents/test1.dat", &buf))
     {

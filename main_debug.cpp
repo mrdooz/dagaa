@@ -2,8 +2,8 @@
 // iq . 2003/2008 . code for 64 kb intros by RGBA                           //
 //--------------------------------------------------------------------------//
 
-#define XRES 1024
-#define YRES 768
+#define XRES 1280
+#define YRES 1024
 
 #define WIN32_LEAN_AND_MEAN
 #define WIN32_EXTRA_LEAN
@@ -13,6 +13,10 @@
 #include "sys/msys_graphics.hpp"
 #include "sys/_win32/msys_filewatcherOS.hpp"
 #include "texturelib/texturelib.hpp"
+
+#if WITH_IMGUI
+#include <sys/imgui_helpers.hpp>
+#endif
 
 //----------------------------------------------------------------------------
 
@@ -27,23 +31,6 @@ typedef struct
   //---------------
   MSYS_EVENTINFO events;
 } WININFO;
-
-// clang-format off
-static const PIXELFORMATDESCRIPTOR pfd =
-{
-    sizeof(PIXELFORMATDESCRIPTOR),
-    1,
-    PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL|PFD_DOUBLEBUFFER,
-    PFD_TYPE_RGBA,
-    32,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0,
-    32,             // zbuffer
-    0,              // stencil!
-    0,
-    PFD_MAIN_PLANE,
-    0, 0, 0, 0
-};
 
 static const char fnt_wait[]    = "arial";
 static const char msg_wait[]   = "wait while loading...";
@@ -154,6 +141,11 @@ static void procMouse(void)
 //----------------------------------------------------------------------------
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+#if WITH_IMGUI
+  if (ImGuiWndProc(hWnd, uMsg, wParam, lParam))
+    return 1;
+#endif
+
   int i;
 
   if (uMsg == WM_SYSCOMMAND && (wParam == SC_SCREENSAVE || wParam == SC_MONITORPOWER))
@@ -288,15 +280,6 @@ static int window_init(WININFO* info)
   if (!(info->hDC = GetDC(info->hWnd)))
     return (0);
 
-  // if (!(PixelFormat = ChoosePixelFormat(info->hDC, &pfd)))
-  //  return (0);
-
-  // if (!SetPixelFormat(info->hDC, PixelFormat, &pfd))
-  //  return (0);
-
-  // SetForegroundWindow( info->hWnd );    // slightly higher priority
-  // SetFocus( info->hWnd );               // sets keyboard focus to the window
-
   return (1);
 }
 
@@ -357,12 +340,16 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR lpCmdLine,
     return (0);
   }
 
-  if (!msys_init((intptr)wininfo.hWnd))
+  if (!msys_init((intptr)wininfo.hWnd, XRES, YRES))
   {
     window_end(&wininfo);
     MessageBox(0, msg_error, 0, MB_OK | MB_ICONEXCLAMATION);
     return (0);
   }
+
+#if WITH_IMGUI
+  InitImGui(wininfo.hWnd);
+#endif
 
   IntroProgressDelegate pd = {&wininfo, loadbar};
   if (!intro_init(XRES, YRES, 1, &pd))
@@ -400,6 +387,22 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR lpCmdLine,
       if (!to)
         to = timeGetTime();
       float t = 0.001f * (float)(timeGetTime() - to);
+
+#if WITH_IMGUI
+      UpdateImGui();
+      //ImGui::ShowTestWindow(nullptr);
+
+      ImGui::Begin("hello!");
+      ImGui::Button("tjong1");
+      ImGui::Button("tjong2");
+      ImGui::Button("tjong3");
+      ImGui::Button("tjong4");
+      ImGui::Button("tjong5");
+      ImGui::Button("tjong6");
+      ImGui::Button("tjong7");
+      ImGui::End();
+      ImGui::Render();
+#endif
 
       g_Graphics->Present();
 

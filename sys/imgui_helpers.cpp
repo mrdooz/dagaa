@@ -6,17 +6,26 @@
 #include <contrib/imgui/imgui.cpp>
 #include <contrib/imgui/imgui_demo.cpp>
 #include <contrib/imgui/imgui_draw.cpp>
+
 #include "imgui_helpers.hpp"
 #include <sys/msys_graphics.hpp>
 #include <sys/gpu_objects.hpp>
-//#include "graphics_context.hpp"
-//#include "init_sequence.hpp"
-//#include "tokko.hpp"
-
-//using namespace tokko;
-//using namespace tokko;
 
 using namespace std;
+
+struct CD3D11_INPUT_ELEMENT_DESC : public D3D11_INPUT_ELEMENT_DESC
+{
+  CD3D11_INPUT_ELEMENT_DESC(LPCSTR name, DXGI_FORMAT format)
+  {
+    SemanticName = name;
+    SemanticIndex = 0;
+    Format = format;
+    InputSlot = 0;
+    AlignedByteOffset = 0;
+    InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+    InstanceDataStepRate = 0;
+  }
+};
 
 namespace
 {
@@ -35,9 +44,6 @@ namespace
   LARGE_INTEGER ticksPerSecond;
   LARGE_INTEGER lastTime = {0};
 
-  //GraphicsContext* g_Graphics;
-  //ConstantBuffer<VERTEX_CONSTANT_BUFFER> g_cb;
-
   GpuObjects g_gpuObjects;
   GpuState g_gpuState;
   ObjectHandle g_texture;
@@ -48,10 +54,8 @@ static int VB_SIZE = 1024 * 1024;
 static int IB_SIZE = 1024 * 1024;
 
 //------------------------------------------------------------------------------
-bool InitDeviceD3D()
+bool CreateD3DResources()
 {
-  //BEGIN_INIT_SEQUENCE();
-
   // Setup rasterizer
   D3D11_RASTERIZER_DESC RSDesc;
   memset(&RSDesc, 0, sizeof(D3D11_RASTERIZER_DESC));
@@ -91,20 +95,17 @@ bool InitDeviceD3D()
   g_constantBuffer = g_Graphics->CreateBuffer(
       D3D11_BIND_CONSTANT_BUFFER, sizeof(VERTEX_CONSTANT_BUFFER), true, nullptr);
 
-  // TODO(magnus)...
-  // Create shaders
-  //vector<D3D11_INPUT_ELEMENT_DESC> inputDesc = {
-  //    CD3D11_INPUT_ELEMENT_DESC("POSITION", DXGI_FORMAT_R32G32_FLOAT),
-  //    CD3D11_INPUT_ELEMENT_DESC("TEXCOORD", DXGI_FORMAT_R32G32_FLOAT),
-  //    CD3D11_INPUT_ELEMENT_DESC("COLOR", DXGI_FORMAT_R8G8B8A8_UNORM),
-  //};
-  //INIT(g_gpuObjects.LoadVertexShader("shaders/out/imgui", "VsMain", 0, &inputDesc));
-  //INIT(g_gpuObjects.LoadPixelShader("shaders/out/imgui", "PsMain"));
+  vector<D3D11_INPUT_ELEMENT_DESC> inputDesc = {
+      CD3D11_INPUT_ELEMENT_DESC("POSITION", DXGI_FORMAT_R32G32_FLOAT),
+      CD3D11_INPUT_ELEMENT_DESC("TEXCOORD", DXGI_FORMAT_R32G32_FLOAT),
+      CD3D11_INPUT_ELEMENT_DESC("COLOR", DXGI_FORMAT_R8G8B8A8_UNORM)
+  };
 
-  //// Create the constant buffer
-  //INIT(g_cb.Create());
+  std::tie(g_gpuObjects._vs, g_gpuObjects._layout) = g_Graphics->LoadVertexShader(
+      "shaders/out/imgui_VsMain.vso", inputDesc.data(), (int)inputDesc.size());
+  g_gpuObjects._ps = g_Graphics->LoadPixelShader("shaders/out/imgui_PsMain.pso");
 
-  //END_INIT_SEQUENCE();
+  return true;
 }
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting
@@ -114,14 +115,14 @@ bool InitDeviceD3D()
 // (0.375f,0.375f)
 static void ImImpl_RenderDrawLists(ImDrawData* draw_data)
 {
-
   if (draw_data->TotalVtxCount > VB_SIZE || draw_data->TotalIdxCount > IB_SIZE)
   {
     //LOG_WARN("Too many verts or indices");
     return;
   }
 
-  g_Graphics->SetRenderTarget(g_Graphics->_defaultBackBuffer, g_Graphics->_defaultDepthStencil, nullptr);
+  g_Graphics->SetRenderTarget(
+      g_Graphics->_defaultBackBuffer, g_Graphics->_defaultDepthStencil, nullptr);
   ImDrawVert* vtx_dst = g_Graphics->MapWriteDiscard<ImDrawVert>(g_gpuObjects._vb);
   ImDrawIdx* idx_dst = g_Graphics->MapWriteDiscard<ImDrawIdx>(g_gpuObjects._ib);
   for (int n = 0; n < draw_data->CmdListsCount; n++)
@@ -150,12 +151,10 @@ static void ImImpl_RenderDrawLists(ImDrawData* draw_data)
         {0.0f, 0.0f, 0.5f, 0.0f},
         {(R + L) / (L - R), (T + B) / (B - T), 0.5f, 1.0f},
     };
-    float* cb =
-        g_Graphics->MapWriteDiscard<float>(g_constantBuffer);
+    float* cb = g_Graphics->MapWriteDiscard<float>(g_constantBuffer);
     memcpy(cb, mvp, sizeof(mvp));
-  } g_Graphics->Unmap(g_constantBuffer);
-
-   
+    g_Graphics->Unmap(g_constantBuffer);
+  } 
 
   // Setup viewport
   {
@@ -174,10 +173,10 @@ static void ImImpl_RenderDrawLists(ImDrawData* draw_data)
   unsigned int stride = sizeof(CUSTOMVERTEX);
   unsigned int offset = 0;
 
-  //g_Graphics->SetGpuObjects(g_gpuObjects);
+  g_Graphics->SetGpuObjects(g_gpuObjects);
   g_Graphics->SetGpuState(g_gpuState);
+  g_Graphics->SetConstantBuffer(g_constantBuffer, ShaderType::VertexShader, 0);
   //g_Graphics->SetGpuStateSamplers(g_gpuState, ShaderType::PixelShader);
-  //g_Graphics->SetConstantBuffer(g_cb, ShaderType::VertexShader, 0);
 
   // Render command list
   int vtx_offset = 0;
@@ -236,122 +235,123 @@ void LoadFontsTexture()
   unsigned char* pixels;
   int width, height;
   io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-  g_texture =
+
+  ObjectHandle h =
       g_Graphics->CreateTexture(width, height, DXGI_FORMAT_R8G8B8A8_UNORM, pixels, width * 4);
+
+  DXGraphics::TextureResource* res = g_Graphics->GetResource<DXGraphics::TextureResource>(h);
+  g_texture = res->data.srv;
 
   // Store our identifier
   // io.Fonts->TexID = (void *)*(u32*)&h;
 }
 
-namespace tokko
+//------------------------------------------------------------------------------
+LRESULT WINAPI ImGuiWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-  //------------------------------------------------------------------------------
-  LRESULT WINAPI ImGuiWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+  ImGuiIO& io = ImGui::GetIO();
+  switch (msg)
   {
-    ImGuiIO& io = ImGui::GetIO();
-    switch (msg)
-    {
-      case WM_LBUTTONDOWN: io.MouseDown[0] = true; return true;
-      case WM_LBUTTONUP: io.MouseDown[0] = false; return true;
-      case WM_RBUTTONDOWN: io.MouseDown[1] = true; return true;
-      case WM_RBUTTONUP: io.MouseDown[1] = false; return true;
-      case WM_MOUSEWHEEL:
-        io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
-        return true;
-      case WM_MOUSEMOVE:
-        // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
-        io.MousePos.x = (float)(signed short)(lParam);
-        io.MousePos.y = (float)(signed short)(lParam >> 16);
-        return true;
-      case WM_CHAR:
-        // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
-        if (wParam > 0 && wParam < 0x10000)
-          io.AddInputCharacter((unsigned short)wParam);
-        return true;
-      case WM_KEYDOWN:
-        io.KeysDown[wParam & 0xff] = true;
-        io.KeyCtrl = wParam == VK_CONTROL;
-        io.KeyShift = wParam == VK_SHIFT;
-        return true;
-      case WM_KEYUP:
-        io.KeysDown[wParam & 0xff] = false;
-        //g_KeyUpTrigger.SetTrigger(wParam & 0xff);
-        return true;
-    }
-
-    return false;
+    case WM_LBUTTONDOWN: io.MouseDown[0] = true; return true;
+    case WM_LBUTTONUP: io.MouseDown[0] = false; return true;
+    case WM_RBUTTONDOWN: io.MouseDown[1] = true; return true;
+    case WM_RBUTTONUP: io.MouseDown[1] = false; return true;
+    case WM_MOUSEWHEEL:
+      io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
+      return true;
+    case WM_MOUSEMOVE:
+      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+      io.MousePos.x = (float)(signed short)(lParam);
+      io.MousePos.y = (float)(signed short)(lParam >> 16);
+      return true;
+    case WM_CHAR:
+      // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
+      if (wParam > 0 && wParam < 0x10000)
+        io.AddInputCharacter((unsigned short)wParam);
+      return true;
+    case WM_KEYDOWN:
+      io.KeysDown[wParam & 0xff] = true;
+      io.KeyCtrl = wParam == VK_CONTROL;
+      io.KeyShift = wParam == VK_SHIFT;
+      return true;
+    case WM_KEYUP:
+      io.KeysDown[wParam & 0xff] = false;
+      //g_KeyUpTrigger.SetTrigger(wParam & 0xff);
+      return true;
   }
 
-  //------------------------------------------------------------------------------
-  void UpdateImGui()
-  {
-    ImGuiIO& io = ImGui::GetIO();
+  return false;
+}
 
-    // Setup time step
-    LARGE_INTEGER currentTime;
-    QueryPerformanceCounter(&currentTime);
-    io.DeltaTime = (float)(currentTime.QuadPart - lastTime.QuadPart) / ticksPerSecond.QuadPart;
-    lastTime = currentTime;
+//------------------------------------------------------------------------------
+void UpdateImGui()
+{
+  ImGuiIO& io = ImGui::GetIO();
 
-    // Setup inputs
-    // (we already got mouse position, buttons, wheel from the window message callback)
-    //     BYTE keystate[256];
-    //     GetKeyboardState(keystate);
-    //     for (int i = 0; i < 256; i++)
-    //       io.KeysDown[i] = (keystate[i] & 0x80) != 0;
-    //     io.KeyCtrl = (keystate[VK_CONTROL] & 0x80) != 0;
-    //     io.KeyShift = (keystate[VK_SHIFT] & 0x80) != 0;
-    // io.MousePos : filled by WM_MOUSEMOVE event
-    // io.MouseDown : filled by WM_*BUTTON* events
-    // io.MouseWheel : filled by WM_MOUSEWHEEL events
+  // Setup time step
+  LARGE_INTEGER currentTime;
+  QueryPerformanceCounter(&currentTime);
+  io.DeltaTime = (float)(currentTime.QuadPart - lastTime.QuadPart) / ticksPerSecond.QuadPart;
+  lastTime = currentTime;
 
-    // Start the frame
-    ImGui::NewFrame();
-  }
+  // Setup inputs
+  // (we already got mouse position, buttons, wheel from the window message callback)
+  //     BYTE keystate[256];
+  //     GetKeyboardState(keystate);
+  //     for (int i = 0; i < 256; i++)
+  //       io.KeysDown[i] = (keystate[i] & 0x80) != 0;
+  //     io.KeyCtrl = (keystate[VK_CONTROL] & 0x80) != 0;
+  //     io.KeyShift = (keystate[VK_SHIFT] & 0x80) != 0;
+  // io.MousePos : filled by WM_MOUSEMOVE event
+  // io.MouseDown : filled by WM_*BUTTON* events
+  // io.MouseWheel : filled by WM_MOUSEWHEEL events
 
-  //------------------------------------------------------------------------------
-  bool InitImGui(HWND hWnd)
-  {
-    InitDeviceD3D();
+  // Start the frame
+  ImGui::NewFrame();
+}
 
-    int display_w = g_Graphics->_swapChainDesc.BufferDesc.Width;
-    int display_h = g_Graphics->_swapChainDesc.BufferDesc.Height;
+//------------------------------------------------------------------------------
+bool InitImGui(HWND hWnd)
+{
+  CreateD3DResources();
 
-    ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2((float)display_w,
-        (float)display_h);       // Display size, in pixels. For clamping windows positions.
-    io.DeltaTime = 1.0f / 60.0f; // Time elapsed since last frame, in seconds (in this sample app
-                                 // we'll override this every frame because our time step is
-                                 // variable)
-    io.KeyMap[ImGuiKey_Tab] = VK_TAB; // Keyboard mapping. ImGui will use those indices to peek into
-                                      // the io.KeyDown[] array that we will update during the
-                                      // application lifetime.
-    io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
-    io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
-    io.KeyMap[ImGuiKey_UpArrow] = VK_UP;
-    io.KeyMap[ImGuiKey_DownArrow] = VK_UP;
-    io.KeyMap[ImGuiKey_Home] = VK_HOME;
-    io.KeyMap[ImGuiKey_End] = VK_END;
-    io.KeyMap[ImGuiKey_Delete] = VK_DELETE;
-    io.KeyMap[ImGuiKey_Backspace] = VK_BACK;
-    io.KeyMap[ImGuiKey_Enter] = VK_RETURN;
-    io.KeyMap[ImGuiKey_Escape] = VK_ESCAPE;
-    io.KeyMap[ImGuiKey_A] = 'A';
-    io.KeyMap[ImGuiKey_C] = 'C';
-    io.KeyMap[ImGuiKey_V] = 'V';
-    io.KeyMap[ImGuiKey_X] = 'X';
-    io.KeyMap[ImGuiKey_Y] = 'Y';
-    io.KeyMap[ImGuiKey_Z] = 'Z';
-    io.RenderDrawListsFn = ImImpl_RenderDrawLists;
-    io.ImeWindowHandle = hWnd;
+  int display_w = g_Graphics->_swapChainDesc.BufferDesc.Width;
+  int display_h = g_Graphics->_swapChainDesc.BufferDesc.Height;
 
-    QueryPerformanceFrequency(&ticksPerSecond);
+  ImGuiIO& io = ImGui::GetIO();
+  io.DisplaySize = ImVec2((float)display_w,
+      (float)display_h);            // Display size, in pixels. For clamping windows positions.
+  io.DeltaTime = 1.0f / 60.0f; // Time elapsed since last frame, in seconds (in this sample app
+                                // we'll override this every frame because our time step is
+                                // variable)
+  io.KeyMap[ImGuiKey_Tab] = VK_TAB; // Keyboard mapping. ImGui will use those indices to peek into
+                                    // the io.KeyDown[] array that we will update during the
+                                    // application lifetime.
+  io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
+  io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
+  io.KeyMap[ImGuiKey_UpArrow] = VK_UP;
+  io.KeyMap[ImGuiKey_DownArrow] = VK_UP;
+  io.KeyMap[ImGuiKey_Home] = VK_HOME;
+  io.KeyMap[ImGuiKey_End] = VK_END;
+  io.KeyMap[ImGuiKey_Delete] = VK_DELETE;
+  io.KeyMap[ImGuiKey_Backspace] = VK_BACK;
+  io.KeyMap[ImGuiKey_Enter] = VK_RETURN;
+  io.KeyMap[ImGuiKey_Escape] = VK_ESCAPE;
+  io.KeyMap[ImGuiKey_A] = 'A';
+  io.KeyMap[ImGuiKey_C] = 'C';
+  io.KeyMap[ImGuiKey_V] = 'V';
+  io.KeyMap[ImGuiKey_X] = 'X';
+  io.KeyMap[ImGuiKey_Y] = 'Y';
+  io.KeyMap[ImGuiKey_Z] = 'Z';
+  io.RenderDrawListsFn = ImImpl_RenderDrawLists;
+  io.ImeWindowHandle = hWnd;
 
-    // Load fonts
-    LoadFontsTexture();
+  QueryPerformanceFrequency(&ticksPerSecond);
 
-    return true;
-  }
+  // Load fonts
+  LoadFontsTexture();
+
+  return true;
 }
 
 #endif

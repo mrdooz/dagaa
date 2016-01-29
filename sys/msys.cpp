@@ -9,10 +9,10 @@
 #include "msys.h"
 #include "msys_graphics.hpp"
 
-int msys_init(intptr h)
+int msys_init(intptr h, int width, int height)
 {
   g_Graphics = new DXGraphics();
-  if (!g_Graphics->Init(HWND(h), 800, 600))
+  if (!g_Graphics->Init(HWND(h), width, height))
     return 0;
 
   if (!msys_mallocInit())
