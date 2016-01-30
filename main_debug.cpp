@@ -363,6 +363,11 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR lpCmdLine,
 
   TextureLib::Init();
 
+  u64 freq;
+  QueryPerformanceFrequency((LARGE_INTEGER*)&freq);
+  u64 startTime;
+  QueryPerformanceCounter((LARGE_INTEGER*)&startTime);
+
   while (!done)
   {
     if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
@@ -388,12 +393,15 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR lpCmdLine,
       static long to = 0;
       if (!to)
         to = timeGetTime();
-      float now = timeGetTime() / 1000.f;
-      float t = 0.001f * (float)(now - to);
+
+      u64 now;
+      QueryPerformanceCounter((LARGE_INTEGER*)&now);
+      float elapsed = (float)(now - startTime) / freq;
+      float t = 0.001f * (float)(timeGetTime() - to);
 
 #if WITH_IMGUI
       UpdateImGui();
-      g_ShaderManifestLoader->Render(now);
+      g_ShaderManifestLoader->Render(elapsed);
       ImGui::Render();
 #endif
 

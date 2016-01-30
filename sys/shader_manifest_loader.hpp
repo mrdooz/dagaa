@@ -48,10 +48,11 @@ namespace manifest
 
   struct Shader
   {
-    void Render();
+    void Render(float time);
     void RenderGui();
     std::string name;
     std::string shaderFile;
+    std::string root;
     std::vector<Var> vars;
     std::vector<char> memory;
     ObjectHandle ps;
@@ -70,8 +71,11 @@ struct ShaderManifestLoader
   bool UpdateManifest(const char* manifest);
   void Render(float time);
 
+  manifest::Shader* FindShader(const std::string& name);
+
   ObjectHandle _cbCommon;
-  std::unordered_map<std::string, manifest::Shader*> _shaders;
+  std::vector<manifest::Shader*> _shaders;
+  int _curShader = 0;
 };
 
 extern ShaderManifestLoader* g_ShaderManifestLoader;
