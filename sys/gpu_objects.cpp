@@ -114,31 +114,18 @@ bool GpuState::Create(const D3D11_DEPTH_STENCIL_DESC* dssDesc,
     const D3D11_BLEND_DESC* blendDesc,
     const D3D11_RASTERIZER_DESC* rasterizerDesc)
 {
-  _depthStencilState = g_Graphics->CreateDepthStencilState(
-      dssDesc ? *dssDesc : CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT()));
-
+  _depthStencilState =
+      dssDesc ? g_Graphics->CreateDepthStencilState(*dssDesc) : g_Graphics->_defaultDepthStencilState;
+  
   _blendState =
-      g_Graphics->CreateBlendState(blendDesc ? *blendDesc : CD3D11_BLEND_DESC(CD3D11_DEFAULT()));
+      blendDesc ? g_Graphics->CreateBlendState(*blendDesc) : g_Graphics->_defaultBlendState;
 
-  _rasterizerState = g_Graphics->CreateRasterizerState(
-      rasterizerDesc ? *rasterizerDesc : CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT()));
+  _rasterizerState = rasterizerDesc ? g_Graphics->CreateRasterizerState(*rasterizerDesc)
+                                    : g_Graphics->_defaultRasterizerState;
 
-  CD3D11_SAMPLER_DESC samplerDesc = CD3D11_SAMPLER_DESC(CD3D11_DEFAULT());
-  _samplers[Linear] = g_Graphics->CreateSamplerState(samplerDesc);
+  memcpy(_samplers, g_Graphics->_samplers, sizeof(_samplers));
 
-  samplerDesc.AddressU = samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-  _samplers[LinearWrap] = g_Graphics->CreateSamplerState(samplerDesc);
-
-  samplerDesc.AddressU = samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
-  _samplers[LinearBorder] = g_Graphics->CreateSamplerState(samplerDesc);
-
-  samplerDesc.AddressU = samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-  samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-  _samplers[Point] = g_Graphics->CreateSamplerState(samplerDesc);
-
-  return _depthStencilState.IsValid() && _blendState.IsValid() && _rasterizerState.IsValid()
-         && _samplers[0].IsValid() && _samplers[1].IsValid() && _samplers[2].IsValid()
-         && _samplers[3].IsValid();
+  return _depthStencilState.IsValid() && _blendState.IsValid() && _rasterizerState.IsValid();
 }
 
 //------------------------------------------------------------------------------

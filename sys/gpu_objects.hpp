@@ -30,7 +30,6 @@ struct GpuObjects
   //    u32 flags = 0,
   //    vector<D3D11_INPUT_ELEMENT_DESC>* elements = nullptr);
   // bool LoadPixelShader(const char* filename, const char* entryPoint);
-  // bool LoadGeometryShader(const char* filename, const char* entryPoint);
 
   D3D11_PRIMITIVE_TOPOLOGY _topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
@@ -51,22 +50,9 @@ struct GpuObjects
 };
 
 //------------------------------------------------------------------------------
-template <typename T>
-struct ConstantBuffer : public T
-{
-  bool Create()
-  {
-    handle = g_Graphics->CreateBuffer(D3D11_BIND_CONSTANT_BUFFER, sizeof(T), true);
-    return handle.IsValid();
-  }
-
-  ObjectHandle handle;
-};
-
-//------------------------------------------------------------------------------
 struct GpuState
 {
-  // Passing 0 uses the default settings
+  // Passing nullptr uses the default settings
   bool Create(const D3D11_DEPTH_STENCIL_DESC* dssDesc = nullptr,
       const D3D11_BLEND_DESC* blendDesc = nullptr,
       const D3D11_RASTERIZER_DESC* rasterizerDesc = nullptr);

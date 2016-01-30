@@ -122,7 +122,7 @@ static void ImImpl_RenderDrawLists(ImDrawData* draw_data)
   }
 
   g_Graphics->SetRenderTarget(
-      g_Graphics->_defaultBackBuffer, g_Graphics->_defaultDepthStencil, nullptr);
+      g_Graphics->_defaultBackBuffer, g_Graphics->_defaultDepthStencil);
   ImDrawVert* vtx_dst = g_Graphics->MapWriteDiscard<ImDrawVert>(g_gpuObjects._vb);
   ImDrawIdx* idx_dst = g_Graphics->MapWriteDiscard<ImDrawIdx>(g_gpuObjects._ib);
   for (int n = 0; n < draw_data->CmdListsCount; n++)

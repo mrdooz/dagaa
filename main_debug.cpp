@@ -13,6 +13,7 @@
 #include "sys/msys_graphics.hpp"
 #include "sys/_win32/msys_filewatcherOS.hpp"
 #include "texturelib/texturelib.hpp"
+#include "sys/shader_manifest_loader.hpp"
 
 #if WITH_IMGUI
 #include <sys/imgui_helpers.hpp>
@@ -225,6 +226,7 @@ static int window_init(WININFO* info)
   wc.lpfnWndProc = WndProc;
   wc.hInstance = info->hInstance;
   wc.lpszClassName = wndclass;
+  wc.hCursor = LoadCursor(NULL, IDC_ARROW);
   // wc.hbrBackground=(HBRUSH)CreateSolidBrush(0x00785838);
 
   if (!RegisterClass(&wc))
@@ -381,26 +383,17 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR lpCmdLine,
       
       done = intro_run(ObjectHandle());
 
-      TextureLib::Tick();
+      //TextureLib::Tick();
 
       static long to = 0;
       if (!to)
         to = timeGetTime();
-      float t = 0.001f * (float)(timeGetTime() - to);
+      float now = timeGetTime() / 1000.f;
+      float t = 0.001f * (float)(now - to);
 
 #if WITH_IMGUI
       UpdateImGui();
-      //ImGui::ShowTestWindow(nullptr);
-
-      ImGui::Begin("hello!");
-      ImGui::Button("tjong1");
-      ImGui::Button("tjong2");
-      ImGui::Button("tjong3");
-      ImGui::Button("tjong4");
-      ImGui::Button("tjong5");
-      ImGui::Button("tjong6");
-      ImGui::Button("tjong7");
-      ImGui::End();
+      g_ShaderManifestLoader->Render(now);
       ImGui::Render();
 #endif
 

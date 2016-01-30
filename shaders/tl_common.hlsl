@@ -12,6 +12,7 @@ sampler LinearBorder : register(s3);
 cbuffer cbCommon : register(b0)
 {
   float2 dim;
+  float time;
 };
 
 //------------------------------------------------------

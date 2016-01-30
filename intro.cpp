@@ -25,7 +25,8 @@ static IntroObject intro;
 int intro_init(int xr, int yr, int nomusic, IntroProgressDelegate* pd)
 {
 #if WITH_FILE_UTILS
-  g_ShaderManifestLoader.AddManifest("c:/projects/dagaa/shaders/out/tl_gradient.manifest");
+  ShaderManifestLoader::Create();
+  g_ShaderManifestLoader->AddManifest("c:/projects/dagaa/shaders/out/tl_gradient.manifest");
 #endif
   // progress report, (from 0 to 200)
   pd->func(pd->obj, 0);

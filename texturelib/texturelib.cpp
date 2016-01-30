@@ -1,5 +1,4 @@
 #include "texturelib.hpp"
-#include <shaders/out/tl_common_VsQuad.vso.hpp>
 #include <shaders/out/tl_arith_PsModulate.pso.hpp>
 #include <shaders/out/tl_basic_PsCopy.pso.hpp>
 #include <shaders/out/tl_basic_PsFill.pso.hpp>
@@ -14,6 +13,7 @@
 #include <sys/msys_containers.hpp>
 #include <sys/msys_graphics.hpp>
 #include <sys/msys_math.hpp>
+#include <sys/gpu_objects.hpp>
 
 #include <vector>
 
@@ -38,21 +38,15 @@ namespace TextureLib
   };
 
   static FixedLinearMap<u8, ObjectHandle, 256> g_Shaders;
-  static ObjectHandle g_vsFullScreen;
   static ObjectHandle g_cbCommon;
 
   static struct
   {
     vec2 dim;
+    float time;
   } cbCommon;
 
-  struct
-  {
-    ObjectHandle hRt;
-    DXGraphics::RenderTarget* rt;
-    ID3D11ShaderResourceView* srv;
-    ID3D11RenderTargetView* rtv;
-  } renderTargets[256];
+  ObjectHandle renderTargets[256];
 
   static const int NUM_AUX_TEXTURES = 16;
 
@@ -72,7 +66,6 @@ namespace TextureLib
 
     const int BUF_SIZE = 4096;
     char readBuf[BUF_SIZE];
-    // char writeBuf[BUF_SIZE];
 
     while (true)
     {
@@ -114,26 +107,18 @@ namespace TextureLib
     ID3D11DeviceContext* ctx = g_Graphics->_context;
     ctx->IASetInputLayout(nullptr);
     ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    ctx->VSSetShader(g_Graphics->GetResource<ID3D11VertexShader>(g_vsFullScreen), 0, 0);
-
     ctx->RSSetViewports(1, &viewport);
+    g_Graphics->SetVertexShader(g_Graphics->_vsFullScreen);
 
-    float blendFactor[4] = { 1, 1, 1, 1 };
-    ctx->OMSetBlendState(
-      g_Graphics->GetResource<ID3D11BlendState>(g_DefaultBlendState), blendFactor, 0xffffffff);
-    ctx->RSSetState(g_Graphics->GetResource<ID3D11RasterizerState>(g_DefaultRasterizerState));
-    ctx->OMSetDepthStencilState(
-      g_Graphics->GetResource<ID3D11DepthStencilState>(g_DepthDisabledState), 0);
-
-    ID3D11SamplerState* sampler =
-      g_Graphics->GetResource<ID3D11SamplerState>(g_Graphics->_samplers[DXGraphics::Linear]);
-    ctx->PSSetSamplers(1, 1, &sampler);
+    GpuState state;
+    state.Create();
+    g_Graphics->SetGpuState(state);
 
     cbCommon.dim.x = (float)TEXTURE_SIZE;
     cbCommon.dim.y = (float)TEXTURE_SIZE;
+    cbCommon.time = 0;
     g_Graphics->CopyToBuffer(g_cbCommon, (void*)&cbCommon, sizeof(cbCommon));
-    ID3D11Buffer* cbCommonPtr = g_Graphics->GetResource<ID3D11Buffer>(g_cbCommon);
-    ctx->PSSetConstantBuffers(0, 1, &cbCommonPtr);
+    g_Graphics->SetConstantBuffer(g_cbCommon, ShaderType::PixelShader, 0);
   }
 
   //-----------------------------------------------------------------------------
@@ -153,12 +138,7 @@ namespace TextureLib
     // create any required outputs
     for (int i = NUM_AUX_TEXTURES; i < prg.texturesUsed; ++i)
     {
-      ObjectHandle hRt = g_Graphics->CreateRenderTarget(TEXTURE_SIZE, TEXTURE_SIZE, true);
-      DXGraphics::RenderTarget* rt = g_Graphics->GetResource<DXGraphics::RenderTarget>(hRt);
-      renderTargets[i].hRt = hRt;
-      renderTargets[i].rt = rt;
-      renderTargets[i].srv = g_Graphics->GetResource<ID3D11ShaderResourceView>(rt->srv);
-      renderTargets[i].rtv = g_Graphics->GetResource<ID3D11RenderTargetView>(rt->rtv);
+      renderTargets[i] = g_Graphics->CreateRenderTarget(TEXTURE_SIZE, TEXTURE_SIZE, true);
     }
 
     ID3D11DeviceContext* ctx = g_Graphics->_context;
@@ -177,7 +157,7 @@ namespace TextureLib
       for (int i = 0; i < numInputTextures; ++i)
       {
         u8 textureIdx = reader.Read<u8>();
-        ctx->PSSetShaderResources(i, 1, &renderTargets[textureIdx].srv);
+        g_Graphics->SetShaderResource(renderTargets[textureIdx], ShaderType::PixelShader, i);
       }
 
       u16 cbufferSize = reader.Read<u16>();
@@ -186,14 +166,12 @@ namespace TextureLib
         // Copy data to the cbuffer
         g_Graphics->CopyToBuffer(cb, reader.Buf(), cbufferSize);
         reader.Skip(cbufferSize);
-        ID3D11Buffer* cbPtr = g_Graphics->GetResource<ID3D11Buffer>(cb);
-        ctx->PSSetConstantBuffers(1, 1, &cbPtr);
+        g_Graphics->SetConstantBuffer(cb, ShaderType::PixelShader, 1);
       }
 
       // Set render target and draw
-      ctx->OMSetRenderTargets(1, &renderTargets[rtIdx].rtv, nullptr);
-      ASSERT(g_Shaders.contains(opIdx));
-      ctx->PSSetShader(g_Graphics->GetResource<ID3D11PixelShader>(g_Shaders[opIdx]), nullptr, 0);
+      g_Graphics->SetRenderTarget(renderTargets[rtIdx], EMPTY_OBJECT_HANDLE);
+      g_Graphics->SetPixelShader(g_Shaders[opIdx]);
       ctx->Draw(6, 0);
 
       // unset views
@@ -209,7 +187,7 @@ namespace TextureLib
     // Free any temporary render targets
     for (int i = NUM_AUX_TEXTURES; i < prg.texturesUsed; ++i)
     {
-      g_Graphics->ReleaseResource(renderTargets[i].hRt);
+      g_Graphics->ReleaseResource(renderTargets[i]);
     }
   }
 
@@ -236,15 +214,8 @@ namespace TextureLib
   //-----------------------------------------------------------------------------
   bool Init()
   {
-    g_vsFullScreen = g_Graphics->CreateShader(FW_STR("shaders/out/tl_common_VsQuadD.vso"),
-        tl_common_VsQuad_bin,
-        sizeof(tl_common_VsQuad_bin),
-        ObjectHandle::VertexShader,
-        nullptr);
-
     g_cbCommon =
         g_Graphics->CreateBuffer(D3D11_BIND_CONSTANT_BUFFER, sizeof(cbCommon), true, nullptr);
-    ID3D11Buffer* commonCb = g_Graphics->GetResource<ID3D11Buffer>(g_cbCommon);
 
 #define LOAD_PS(cmd, filename, bin)                                                                \
   g_Shaders[(u8)cmd] = g_Graphics->CreateShader(FW_STR("shaders/out/" filename ".pso"),            \
@@ -270,12 +241,7 @@ namespace TextureLib
     // create the aux textures, and the required outputs
     for (int i = 255, j = 0; j <= NUM_AUX_TEXTURES; i = j++)
     {
-      ObjectHandle hRt = g_Graphics->CreateRenderTarget(TEXTURE_SIZE, TEXTURE_SIZE, true);
-      DXGraphics::RenderTarget* rt = g_Graphics->GetResource<DXGraphics::RenderTarget>(hRt);
-      renderTargets[i].hRt = hRt;
-      renderTargets[i].rt = rt;
-      renderTargets[i].srv = g_Graphics->GetResource<ID3D11ShaderResourceView>(rt->srv);
-      renderTargets[i].rtv = g_Graphics->GetResource<ID3D11RenderTargetView>(rt->rtv);
+      renderTargets[i] = g_Graphics->CreateRenderTarget(TEXTURE_SIZE, TEXTURE_SIZE, true);
     }
 
 #if WITH_TEXTURE_UPDATE
@@ -316,11 +282,12 @@ namespace TextureLib
     ID3D11DeviceContext* ctx = g_Graphics->_context;
     SetupState(CD3D11_VIEWPORT(
         0.f, 0.f, (float)g_Graphics->_backBufferWidth, (float)g_Graphics->_backBufferHeight));
-    ctx->PSSetShaderResources(0, 1, &renderTargets[0xff].srv);
-    ctx->OMSetRenderTargets(1, &g_Graphics->_renderTargetView, nullptr);
-    ctx->PSSetShader(
-        g_Graphics->GetResource<ID3D11PixelShader>(g_Shaders[(u8)ShaderOps::Copy]), nullptr, 0);
+
+    g_Graphics->SetShaderResource(renderTargets[0xff], ShaderType::PixelShader);
+    g_Graphics->SetRenderTarget(g_Graphics->_defaultBackBuffer, g_Graphics->_defaultDepthStencil);
+    g_Graphics->SetPixelShader(g_Shaders[(u8)ShaderOps::Copy]);
     ctx->Draw(6, 0);
+    g_Graphics->SetShaderResource(EMPTY_OBJECT_HANDLE, ShaderType::PixelShader);
   }
 
   //-----------------------------------------------------------------------------

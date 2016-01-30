@@ -1,6 +1,9 @@
 #include "tl_common.hlsl"
 
 // cb-meta-begin: PsLinearGradient
+// linPower: range: 0.1..10
+// pos0: range: -1..1
+// pos1: range: -1..1
 // cb-meta-end
 cbuffer cbLinearGradient : register(b1)
 {

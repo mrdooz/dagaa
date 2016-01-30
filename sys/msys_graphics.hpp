@@ -87,6 +87,8 @@ struct DXGraphics
     return &res->data;
   }
 
+  void SetDefaultRenderTarget();
+  void SetRenderTarget(ObjectHandle rt, ObjectHandle ds);
   void SetShaderResource(ObjectHandle h, ShaderType type, u32 slot = 0);
   void SetScissorRect(const D3D11_RECT& r);
   void SetViewport(const D3D11_VIEWPORT& viewPort);
@@ -96,14 +98,11 @@ struct DXGraphics
   void ReleaseResource(ObjectHandle h);
   int FindFreeResource(int start);
 
-  void SetRenderTarget(
-      ObjectHandle renderTarget, ObjectHandle depthStencil, const color* clearTarget);
-
   bool CreateBufferInner(
       D3D11_BIND_FLAG bind, int size, bool dynamic, const void* data, ID3D11Buffer** buffer);
 
   ObjectHandle CreateBuffer(
-    D3D11_BIND_FLAG bind, int size, bool dynamic, const void* buf);
+    D3D11_BIND_FLAG bind, int size, bool dynamic, const void* buf = nullptr);
 
   template <typename T>
   T* MapWriteDiscard(ObjectHandle h, int* pitch = nullptr);
@@ -112,10 +111,23 @@ struct DXGraphics
 
   void CopyToBuffer(ObjectHandle h, const void* data, u32 len);
 
+  // convenience methods
   void SetConstantBuffer(ObjectHandle h, ShaderType type, int slot);
+  void SetVertexShader(ObjectHandle h);
+  void SetPixelShader(ObjectHandle h);
+
   void SetGpuObjects(const GpuObjects& objects);
   void SetGpuState(const GpuState& state);
   ObjectHandle FindByHash(u32 hash, ObjectHandle::Type type);
+
+  static ObjectHandle EMTPY_HANDLE;
+
+  // common/default states and shaders
+  ObjectHandle _defaultBlendState;
+  ObjectHandle _defaultRasterizerState;
+  ObjectHandle _defaultDepthStencilState;
+  ObjectHandle _depthDisabledState;
+  ObjectHandle _vsFullScreen;
 
   enum Samplers
   {
@@ -128,15 +140,16 @@ struct DXGraphics
   ObjectHandle _samplers[4];
 
   D3D_FEATURE_LEVEL _featureLevel;
+
   ID3D11Device* _device;
   ID3D11DeviceContext* _context;
 
   DXGI_SWAP_CHAIN_DESC _swapChainDesc;
   IDXGISwapChain* _swapChain;
-  ID3D11RenderTargetView* _renderTargetView;
-  ID3D11Texture2D* _backBuffer;
 
+  ID3D11Texture2D* _backBuffer;
   ID3D11Texture2D* _depthStencilBuffer;
+  ID3D11RenderTargetView* _renderTargetView;
   ID3D11DepthStencilView* _depthStencilView;
 
   CD3D11_VIEWPORT _viewport;
@@ -172,7 +185,7 @@ struct DXGraphics
   typedef ResourceData<Texture> TextureResource;
 
   template <typename T>
-  int FindFreeResourceData(const ResourceData<T>* buf);
+  int FindFreeResourceData(ResourceData<T>* buf);
   template <typename T>
   void InitResourceData(ResourceData<T>* buf);
 
@@ -197,11 +210,6 @@ T* DXGraphics::MapWriteDiscard(ObjectHandle h, int* pitch)
 
   return (T*)res.pData;
 }
-
-extern ObjectHandle g_DefaultBlendState;
-extern ObjectHandle g_DefaultRasterizerState;
-extern ObjectHandle g_DefaultDepthStencilState;
-extern ObjectHandle g_DepthDisabledState;
 
 extern DXGraphics* g_Graphics;
 

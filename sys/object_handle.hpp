@@ -42,6 +42,11 @@ struct ObjectHandle
 
   bool IsValid() const { return type != Invalid; }
 
+  friend bool operator==(ObjectHandle lhs, ObjectHandle rhs)
+  {
+    return lhs.raw == rhs.raw;
+  }
+
   union {
     struct {
       u32 type : NUM_TYPE_BITS;
@@ -56,4 +61,4 @@ struct ObjectHandle
 
 static_assert(sizeof(ObjectHandle) <= sizeof(u64), "ObjectHandle too large");
 
-extern ObjectHandle g_EmptyHandle;
+extern ObjectHandle EMPTY_OBJECT_HANDLE;
