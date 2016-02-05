@@ -10,12 +10,11 @@
 #include <sys/msys_file.hpp>
 #include <sys/msys_libc.h>
 #include <sys/msys_utils.hpp>
-#include <sys/msys_containers.hpp>
 #include <sys/msys_graphics.hpp>
 #include <sys/msys_math.hpp>
 #include <sys/gpu_objects.hpp>
 
-#include <vector>
+//#include <vector>
 
 #define LOAD_FROM_FILE 1
 
@@ -37,7 +36,8 @@ namespace TextureLib
     Modulate = 64,
   };
 
-  static FixedLinearMap<u8, ObjectHandle, 256> g_Shaders;
+  static ObjectHandle g_Shaders[256];
+  //static FixedLinearMap<u8, ObjectHandle, 256> g_Shaders;
   static ObjectHandle g_cbCommon;
 
   static struct
@@ -121,14 +121,16 @@ namespace TextureLib
     g_Graphics->SetConstantBuffer(g_cbCommon, ShaderType::PixelShader, 0);
   }
 
+  // Hah, this has to be outside the function, or it'll case a compiler error :)
+  struct VmPrg
+  {
+    u8 version = 1;
+    u8 texturesUsed = 0;
+  };
+
   //-----------------------------------------------------------------------------
   void GenerateTexture(const BinaryReader& reader)
   {
-    struct VmPrg
-    {
-      u8 version = 1;
-      u8 texturesUsed = 0;
-    };
 
     VmPrg prg = reader.Read<VmPrg>();
 
@@ -298,3 +300,4 @@ namespace TextureLib
 #endif
   }
 }
+

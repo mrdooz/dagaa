@@ -240,7 +240,7 @@ void LoadFontsTexture()
       g_Graphics->CreateTexture(width, height, DXGI_FORMAT_R8G8B8A8_UNORM, pixels, width * 4);
 
   DXGraphics::TextureResource* res = g_Graphics->GetResource<DXGraphics::TextureResource>(h);
-  g_texture = res->data.srv;
+  g_texture = res->srv;
 
   // Store our identifier
   // io.Fonts->TexID = (void *)*(u32*)&h;

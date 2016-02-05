@@ -256,7 +256,7 @@ void DXGraphics::ReleaseResource(ObjectHandle h)
     RELEASE_RESOURCE(RasterizeState, ID3D11RasterizerState);
     RELEASE_RESOURCE(DepthStencilState, ID3D11DepthStencilState);
 
-    RELEASE_RESOURCE(Texture, ID3D11Texture2D);
+    RELEASE_RESOURCE(Texture2d, ID3D11Texture2D);
     RELEASE_RESOURCE(RenderTargetView, ID3D11RenderTargetView);
     RELEASE_RESOURCE(DepthStencilView, ID3D11DepthStencilView);
     RELEASE_RESOURCE(ShaderResourceView, ID3D11ShaderResourceView);
@@ -266,20 +266,20 @@ void DXGraphics::ReleaseResource(ObjectHandle h)
     case ObjectHandle::RenderTargetData:
     {
       RenderTargetResource* rt = (RenderTargetResource*)_resources[idx].ptr;
-      ReleaseResource(rt->data.texture);
-      ReleaseResource(rt->data.rtv);
-      if (rt->data.srv.IsValid())
-        ReleaseResource(rt->data.srv);
-      rt->flags &= ~RenderTargetResource::FlagsFree;
+      ReleaseResource(rt->texture);
+      ReleaseResource(rt->rtv);
+      if (rt->srv.IsValid())
+        ReleaseResource(rt->srv);
+      delete rt;
       break;
     }
 
     case ObjectHandle::TextureData:
     {
       TextureResource* t = (TextureResource*)_resources[idx].ptr;
-      ReleaseResource(t->data.texture);
-      ReleaseResource(t->data.srv);
-      t->flags &= ~TextureResource::FlagsFree;
+      ReleaseResource(t->texture);
+      ReleaseResource(t->srv);
+      delete t;
       break;
     }
 
@@ -307,15 +307,15 @@ ObjectHandle DXGraphics::CreateRenderTarget(int width, int height, bool createSr
   if (FAILED(_device->CreateTexture2D(&desc, nullptr, &t)))
     EMPTY_OBJECT_HANDLE;
 
-  RenderTargetResource* rtData = &_renderTargets[FindFreeResourceData(_renderTargets)];
+  RenderTargetResource* rtData = new RenderTargetResource();
   ObjectHandle hData = AddResource(ObjectHandle::RenderTargetData, rtData);
-  rtData->data.texture = AddResource(ObjectHandle::Texture, t);
+  rtData->texture = AddResource(ObjectHandle::Texture2d, t);
 
   CD3D11_RENDER_TARGET_VIEW_DESC rtDesc =
       CD3D11_RENDER_TARGET_VIEW_DESC(D3D11_RTV_DIMENSION_TEXTURE2D, desc.Format);
   ID3D11RenderTargetView* rtv;
   _device->CreateRenderTargetView(t, &rtDesc, &rtv);
-  rtData->data.rtv = AddResource(ObjectHandle::RenderTargetView, rtv);
+  rtData->rtv = AddResource(ObjectHandle::RenderTargetView, rtv);
 
   // create SRV
   if (createSrv)
@@ -325,7 +325,7 @@ ObjectHandle DXGraphics::CreateRenderTarget(int width, int height, bool createSr
     ID3D11ShaderResourceView* srv;
     if (FAILED(_device->CreateShaderResourceView(t, &srvDesc, &srv)))
       return EMPTY_OBJECT_HANDLE;
-    rtData->data.srv = AddResource(ObjectHandle::ShaderResourceView, srv);
+    rtData->srv = AddResource(ObjectHandle::ShaderResourceView, srv);
   }
 
   return hData;
@@ -350,9 +350,9 @@ ObjectHandle DXGraphics::CreateTexture(
   if (FAILED(_device->CreateTexture2D(&desc, nullptr, &t)))
     EMPTY_OBJECT_HANDLE;
 
-  TextureResource* tData = &_textures[FindFreeResourceData(_textures)];
+  TextureResource* tData = new TextureResource();
   ObjectHandle hData = AddResource(ObjectHandle::TextureData, tData);
-  tData->data.texture = AddResource(ObjectHandle::Texture, t);
+  tData->texture = AddResource(ObjectHandle::Texture2d, t);
 
   // create SRV
   D3D11_SRV_DIMENSION dim = D3D11_SRV_DIMENSION_TEXTURE2D;
@@ -360,7 +360,7 @@ ObjectHandle DXGraphics::CreateTexture(
   ID3D11ShaderResourceView* srv;
   if (FAILED(_device->CreateShaderResourceView(t, &srvDesc, &srv)))
     return EMPTY_OBJECT_HANDLE;
-  tData->data.srv = AddResource(ObjectHandle::ShaderResourceView, srv);
+  tData->srv = AddResource(ObjectHandle::ShaderResourceView, srv);
 
   if (data)
   {
@@ -514,7 +514,7 @@ int DXGraphics::CreateDevice(HWND h, u32 width, u32 height)
   // Create render target view for backbuffer
   _swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&_backBuffer);
   _device->CreateRenderTargetView(_backBuffer, 0, &_renderTargetView);
-  AddResource(ObjectHandle::Texture, _backBuffer);
+  AddResource(ObjectHandle::Texture2d, _backBuffer);
   _defaultBackBuffer = AddResource(ObjectHandle::RenderTargetView, _renderTargetView);
   _backBuffer->Release();
 
@@ -534,7 +534,7 @@ int DXGraphics::CreateDevice(HWND h, u32 width, u32 height)
   HR(_device->CreateTexture2D(&depthStencilDesc, 0, &_depthStencilBuffer));
   HR(_device->CreateDepthStencilView(_depthStencilBuffer, 0, &_depthStencilView));
   _defaultDepthStencil = AddResource(ObjectHandle::DepthStencilView, _depthStencilView);
-  AddResource(ObjectHandle::Texture, _depthStencilBuffer);
+  AddResource(ObjectHandle::Texture2d, _depthStencilBuffer);
 
   _viewport = CD3D11_VIEWPORT(0.f, 0.f, (float)width, (float)height);
 
@@ -646,9 +646,6 @@ int DXGraphics::Init(HWND h, u32 width, u32 height)
   CreateDefaultStates();
   _context->OMSetRenderTargets(1, &_renderTargetView, _depthStencilView);
 
-  InitResourceData(_renderTargets);
-  InitResourceData(_textures);
-
   return 1;
 }
 
@@ -687,7 +684,7 @@ void DXGraphics::SetRenderTarget(ObjectHandle rt, ObjectHandle ds)
 {
   if (rt.type == ObjectHandle::RenderTargetData)
   {
-    rt = g_Graphics->GetResource<DXGraphics::RenderTarget>(rt)->rtv;
+    rt = GetResource<RenderTargetResource>(rt)->rtv;
   }
 
   ASSERT(rt.type == ObjectHandle::RenderTargetView || rt == EMPTY_OBJECT_HANDLE);
@@ -701,11 +698,11 @@ void DXGraphics::SetShaderResource(ObjectHandle h, ShaderType type, u32 slot)
 {
   if (h.type == ObjectHandle::RenderTargetData)
   {
-    h = g_Graphics->GetResource<DXGraphics::RenderTarget>(h)->srv;
+    h = g_Graphics->GetResource<DXGraphics::RenderTargetResource>(h)->srv;
   }
   else if (h.type == ObjectHandle::TextureData)
   {
-    h = g_Graphics->GetResource<DXGraphics::Texture>(h)->srv;
+    h = g_Graphics->GetResource<DXGraphics::TextureResource>(h)->srv;
   }
 
   ASSERT(h.type == ObjectHandle::ShaderResourceView || h == EMPTY_OBJECT_HANDLE);
@@ -730,33 +727,6 @@ void DXGraphics::SetViewport(const D3D11_VIEWPORT& viewPort)
 void DXGraphics::SetScissorRect(const D3D11_RECT& r)
 {
   _context->RSSetScissorRects(1, &r);
-}
-
-//------------------------------------------------------------------------------
-template <typename T>
-int DXGraphics::FindFreeResourceData(ResourceData<T>* buf)
-{
-  for (int i = 0; i < MAX_NUM_RESOURCES; ++i)
-  {
-    if (buf[i].flags == ResourceData<T>::FlagsFree)
-    {
-      buf[i].flags &= ~ResourceData<T>::FlagsFree;
-      return i;
-    }
-  }
-
-  ASSERT(!"No free resource found!");
-  return -1;
-}
-
-//------------------------------------------------------------------------------
-template <typename T>
-void DXGraphics::InitResourceData(ResourceData<T>* buf)
-{
-  for (int i = 0; i < MAX_NUM_RESOURCES; ++i)
-  {
-    buf[i].flags = ResourceData<T>::FlagsFree;
-  }
 }
 
 //------------------------------------------------------------------------------

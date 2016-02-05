@@ -20,19 +20,6 @@ enum class ShaderType
 //-----------------------------------------------------------------------------
 struct DXGraphics
 {
-  struct RenderTarget
-  {
-    ObjectHandle texture;
-    ObjectHandle srv;
-    ObjectHandle rtv;
-  };
-
-  struct Texture
-  {
-    ObjectHandle texture;
-    ObjectHandle srv;
-  };
-
   DXGraphics();
   int Init(HWND h, u32 width, u32 height);
   void Close();
@@ -80,13 +67,6 @@ struct DXGraphics
     return (T*)_resources[h.id].ptr;
   }
 
-  template <>
-  RenderTarget* GetResource(ObjectHandle h)
-  {
-    RenderTargetResource* res = (RenderTargetResource*)_resources[h.id].ptr;
-    return &res->data;
-  }
-
   void SetDefaultRenderTarget();
   void SetRenderTarget(ObjectHandle rt, ObjectHandle ds);
   void SetShaderResource(ObjectHandle h, ShaderType type, u32 slot = 0);
@@ -96,7 +76,7 @@ struct DXGraphics
   ObjectHandle CreateSamplerState(const D3D11_SAMPLER_DESC& desc);
   ObjectHandle AddResource(ObjectHandle::Type type, void* resource, u32 hash = 0);
   void ReleaseResource(ObjectHandle h);
-  int FindFreeResource(int start);
+  int FindFreeResource(int start = 0);
 
   bool CreateBufferInner(
       D3D11_BIND_FLAG bind, int size, bool dynamic, const void* data, ID3D11Buffer** buffer);
@@ -171,29 +151,36 @@ struct DXGraphics
     u32 hash;
   };
 
-  template <typename T>
-  struct ResourceData
+  struct RenderTargetResource
   {
-    enum Flags {
-      FlagsFree = (1 << 0),
-    };
-    u32 flags;
-    T data;
+    ObjectHandle texture;
+    ObjectHandle srv;
+    ObjectHandle rtv;
   };
 
-  typedef ResourceData<RenderTarget> RenderTargetResource;
-  typedef ResourceData<Texture> TextureResource;
+  struct TextureResource
+  {
+    ObjectHandle texture;
+    ObjectHandle srv;
+  };
 
   template <typename T>
-  int FindFreeResourceData(ResourceData<T>* buf);
+  ID3D11ShaderResourceView* GetSrv(ObjectHandle h)
+  {
+    T* GetResource<T>(h);
+    return GetResource<ID3D11ShaderResourceView>(h.srv);
+  }
+
   template <typename T>
-  void InitResourceData(ResourceData<T>* buf);
+  ID3D11ShaderResourceView* GetTexture(ObjectHandle h)
+  {
+    T* GetResource<T>(h);
+    return GetResource<ID3D11Texture2D>(h.texture);
+  }
 
   enum { MAX_NUM_RESOURCES = 1 << ObjectHandle::NUM_ID_BITS };
   Resource _resources[MAX_NUM_RESOURCES];
   int _firstFreeResource = -1;
-  RenderTargetResource _renderTargets[MAX_NUM_RESOURCES];
-  TextureResource _textures[MAX_NUM_RESOURCES];
 
   bool _vsync = true;
 };

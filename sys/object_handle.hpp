@@ -26,7 +26,7 @@ struct ObjectHandle
     DepthStencilState,
     Sampler,
 
-    Texture,
+    Texture2d,
     RenderTargetView,
     DepthStencilView,
     ShaderResourceView,

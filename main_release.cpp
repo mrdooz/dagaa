@@ -239,7 +239,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR lpCmdLine,
     ExitProcess(0);
   }
 
-  if (!msys_init((intptr)wininfo.hWnd))
+  if (!msys_init((intptr)wininfo.hWnd, XRES, YRES))
   {
     window_end(&wininfo);
     MessageBox(0, msg_error, 0, MB_OK | MB_ICONEXCLAMATION);
